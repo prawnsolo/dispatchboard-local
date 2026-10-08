@@ -1,4 +1,5 @@
 import { ErrorNote } from './ErrorNote.tsx'
+import { RestorePanel } from './RestorePanel.tsx'
 import { useEffect, useId, useState } from 'react'
 import {
   CLEAR_SCHEDULED_CONFIRM,
@@ -579,6 +580,9 @@ export function SettingsPanel({
                   </button>
                 </div>
                 {backupMessage ? <p className="mt-2 break-all text-sm text-ink-body">{backupMessage}</p> : null}
+                <div className="mt-3">
+                  <RestorePanel disabled={Boolean(pathError)} />
+                </div>
                 <Details label="Backups and file location">
                   <p>A backup runs about once a day. The newest 14 are kept next to the database and stay on this PC.</p>
                   {dbPath ? <p className="break-all font-mono text-ink">{dbPath}</p> : null}

@@ -155,6 +155,43 @@ export async function backupIfDue(): Promise<string | null> {
   }
 }
 
+export type BackupEntry = {
+  name: string
+  size: number
+  modified_ms: number
+  before_restore: boolean
+}
+
+export async function listLocalBackups(): Promise<BackupEntry[]> {
+  return invoke<BackupEntry[]>('list_backups')
+}
+
+/**
+ * Schedule a restore and restart the app. The swap itself happens at the next
+ * launch, before the database opens (see src-tauri/src/restore.rs). Folding the
+ * write-ahead log into the main file first means the copy that gets set aside
+ * holds everything saved so far.
+ */
+export async function restoreFromBackup(name: string): Promise<void> {
+  const db = await open()
+  try {
+    await db.select('PRAGMA wal_checkpoint(TRUNCATE)')
+  } catch {
+    // not in WAL mode or checkpoint refused: the restore still keeps the file as it is
+  }
+  await invoke('restore_stage', { name })
+  await invoke('restart_app')
+}
+
+/** Message from a restore that ran at launch, once. */
+export async function takeRestoreResult(): Promise<string | null> {
+  try {
+    return (await invoke<string | null>('restore_result_take')) ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function wipeLocalDatabase(): Promise<void> {
   await wipeDatabase(await open())
 }

@@ -71,7 +71,6 @@ export function MapScreen({
   const [fixId, setFixId] = useState<number | null>(null)
   const [pinDrop, setPinDrop] = useState(false)
   const [dropped, setDropped] = useState<{ lat: number; lng: number } | null>(null)
-  const [promptOpen, setPromptOpen] = useState(false)
   const [radiusMinutes, setRadiusMinutes] = useState(30)
   const [center, setCenter] = useState<ProximityCenter | null>(null)
   const [geocoding, setGeocoding] = useState(false)
@@ -83,7 +82,6 @@ export function MapScreen({
   const [driveFromCache, setDriveFromCache] = useState(false)
   const [driveChecking, setDriveChecking] = useState(false)
   const googleKey = useHasGoogleMapsApiKey()
-  const promptedRef = useRef(false)
 
   useEffect(() => {
     if (!pinDrop) return
@@ -98,12 +96,6 @@ export function MapScreen({
     setTrackedDate(date)
     setAllDates(false)
   }
-
-  useEffect(() => {
-    if (!active || allowed || promptedRef.current) return
-    promptedRef.current = true
-    setPromptOpen(true)
-  }, [active, allowed])
 
   useEffect(() => {
     if (!active) return
@@ -336,7 +328,6 @@ export function MapScreen({
 
   function allow() {
     setAllowed(true)
-    setPromptOpen(false)
   }
 
   function confirmAllow(): boolean {
@@ -629,47 +620,6 @@ export function MapScreen({
           }}
         />
       </div>
-
-      {promptOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="map-network-title"
-            className="w-full max-w-md rounded-lg bg-white p-5 shadow-card"
-          >
-            <h2 id="map-network-title" className="text-lg font-semibold">
-              Allow network geocoding?
-            </h2>
-            <p className="mt-2 text-sm text-ink-body">
-              The map can already show pins stored on this PC and the Fredericksburg yard. Map tiles load from
-              OpenFreeMap when this tab is open.
-            </p>
-            <p className="mt-2 text-sm text-ink-body">
-              Census geocoding stays off until you allow it. Allowing it sends street addresses to the public US Census
-              Bureau geocoder. Nearby may also call OpenStreetMap Nominatim. If a Google Maps API key is saved in
-              Settings, an address Census cannot match or cannot reach (and that has no site pin) is also sent to Google.
-              With no key, Google is not called.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={allow}
-                className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
-              >
-                Allow network geocoding
-              </button>
-              <button
-                type="button"
-                onClick={() => setPromptOpen(false)}
-                className="rounded-md px-4 py-2 text-sm font-semibold text-ink-body hover:text-ink"
-              >
-                Not now
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {fixJob && !pinDrop ? (
         <UnmappedFix

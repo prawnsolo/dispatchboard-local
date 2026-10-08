@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type React
 import { JobChecklist } from './JobChecklist.tsx'
 import { zoneCodeFromServiceZone } from '../lib/add.ts'
 import { applyLocalTemplate, saveLocalJob } from '../lib/db.ts'
+import { announceJobEdited } from '../lib/undo.ts'
 import type { JobDraft } from '../lib/store.ts'
 
 const controlClass =
@@ -100,6 +101,7 @@ export function JobDrawer({
     setError(null)
     try {
       const saved = await saveLocalJob(form)
+      if (initial.id != null) announceJobEdited(initial)
       if (form.id == null) setForm((current) => ({ ...current, id: saved.id }))
       onChanged()
       if (initial.id == null && templateToApply != null && !initial.is_capacity_block) {

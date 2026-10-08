@@ -14,6 +14,11 @@
     "allow-google-api-key-get",
     "allow-google-api-key-set",
     "allow-backup-target",
-    "allow-geo-http-get"
+    "allow-geo-http-get",
+    "allow-list-backups",
+    "allow-restore-stage",
+    "allow-restore-cancel",
+    "allow-restore-result-take",
+    "allow-restart-app"
   ]
 }

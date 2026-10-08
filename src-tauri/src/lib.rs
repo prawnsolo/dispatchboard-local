@@ -1,7 +1,9 @@
 use tauri::Manager;
 
 mod geo;
+mod restore;
 mod secret;
+mod winstate;
 
 /// Same file the SQL plugin opens for `sqlite:dispatchboard.db`.
 #[tauri::command]
@@ -91,17 +93,118 @@ async fn geo_http_get(
     geo::get(&client, provider, &url).await
 }
 
+/// Backups in `<config>/backups` that can be restored, newest first.
+#[derive(serde::Serialize)]
+struct BackupEntry {
+    name: String,
+    size: u64,
+    modified_ms: u64,
+    before_restore: bool,
+}
+
+#[tauri::command]
+fn list_backups(app: tauri::AppHandle) -> Result<Vec<BackupEntry>, String> {
+    Ok(restore::list(&config_dir(&app)?)
+        .into_iter()
+        .map(|b| BackupEntry {
+            name: b.name,
+            size: b.size,
+            modified_ms: b.modified_ms,
+            before_restore: b.before_restore,
+        })
+        .collect())
+}
+
+/// Schedule a restore for the next launch. The frontend then calls `restart_app`.
+#[tauri::command]
+fn restore_stage(app: tauri::AppHandle, name: String) -> Result<(), String> {
+    restore::stage(&config_dir(&app)?, &name)
+}
+
+/// Undo a staged restore that has not happened yet.
+#[tauri::command]
+fn restore_cancel(app: tauri::AppHandle) -> Result<(), String> {
+    restore::cancel(&config_dir(&app)?);
+    Ok(())
+}
+
+/// What happened to the last restore, once. None when there was none.
+#[tauri::command]
+fn restore_result_take(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    Ok(restore::take_result(&config_dir(&app)?))
+}
+
+#[tauri::command]
+fn restart_app(app: tauri::AppHandle) {
+    app.restart();
+}
+
+/// Put the window back where it was, and save its place when it closes.
+fn remember_window(app: &tauri::App, base: std::path::PathBuf) {
+    let Some(window) = app.get_webview_window("main") else { return };
+
+    if let Some(saved) = winstate::load(&base) {
+        let screens: Vec<winstate::Screen> = window
+            .available_monitors()
+            .unwrap_or_default()
+            .iter()
+            .map(|m| (m.position().x, m.position().y, m.size().width, m.size().height))
+            .collect();
+        if winstate::fits(&saved, &screens) {
+            let _ = window.set_size(tauri::PhysicalSize::new(saved.width, saved.height));
+            let _ = window.set_position(tauri::PhysicalPosition::new(saved.x, saved.y));
+            if saved.maximized {
+                let _ = window.maximize();
+            }
+        }
+    }
+
+    let tracked = window.clone();
+    window.on_window_event(move |event| {
+        if let tauri::WindowEvent::CloseRequested { .. } = event {
+            let maximized = tracked.is_maximized().unwrap_or(false);
+            let (Ok(pos), Ok(size)) = (tracked.outer_position(), tracked.outer_size()) else { return };
+            let mut state = winstate::WinState { x: pos.x, y: pos.y, width: size.width, height: size.height, maximized };
+            if maximized {
+                // Keep the last normal size so un-maximizing later has somewhere to go.
+                if let Some(prev) = winstate::load(&base) {
+                    state.x = prev.x;
+                    state.y = prev.y;
+                    state.width = prev.width;
+                    state.height = prev.height;
+                }
+            }
+            winstate::save(&base, &state);
+        }
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_sql::Builder::default().build())
         .manage(geo::client())
+        .setup(|app| {
+            // A restore staged by the last session runs now, before the webview can
+            // open the database file. Problems are recorded for the UI, never fatal.
+            if let Ok(base) = app.path().app_config_dir() {
+                let _ = std::fs::create_dir_all(&base);
+                let _ = restore::apply_pending(&base);
+                remember_window(app, base);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             db_path,
             google_api_key_get,
             google_api_key_set,
             backup_target,
-            geo_http_get
+            geo_http_get,
+            list_backups,
+            restore_stage,
+            restore_cancel,
+            restore_result_take,
+            restart_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running DispatchBoard (Local)");

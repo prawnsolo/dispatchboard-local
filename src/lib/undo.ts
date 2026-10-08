@@ -1,4 +1,6 @@
-/** In-memory schedule undo. Same shape as the office stack: ~10s, max 3. */
+import type { JobDraft } from './store.ts'
+
+/** In-memory undo for moves and drawer edits. Same shape as the office stack: ~10s, max 3. */
 
 export const UNDO_TTL_MS = 10_000
 export const UNDO_STACK_MAX = 3
@@ -16,6 +18,8 @@ export type ScheduleUndoEntry = {
   id: string
   label: string
   previous: ScheduleSnapshot
+  /** Set for a drawer edit: the whole job as it was before the save. */
+  restoreDraft?: JobDraft
   createdAt: number
   expiresAt: number
 }
@@ -71,4 +75,36 @@ export function popUndo(stack: ScheduleUndoEntry[]): {
 export function newestLive(stack: ScheduleUndoEntry[], now: number = Date.now()): ScheduleUndoEntry | undefined {
   const live = pruneExpired(stack, now)
   return live[live.length - 1]
+}
+
+/** Undo entry for a drawer edit. `before` is the draft the drawer opened with. */
+export function makeEditUndoEntry(before: JobDraft, now: number = Date.now()): ScheduleUndoEntry {
+  const id = before.id ?? 0
+  return {
+    id: `edit:${id}:${now}`,
+    label: `Saved ${before.customer_name || 'job'}`,
+    previous: {
+      jobId: id,
+      customerName: before.customer_name,
+      schedule_date: before.schedule_date || null,
+      technician_name: before.technician_name || null,
+      begin_time: before.begin_time || null,
+      end_time: before.end_time || null,
+    },
+    restoreDraft: before,
+    createdAt: now,
+    expiresAt: now + UNDO_TTL_MS,
+  }
+}
+
+/** Drawer to App without threading a prop through every screen. */
+type EditListener = (before: JobDraft) => void
+let editListener: EditListener | null = null
+
+export function onJobEdited(listener: EditListener | null): void {
+  editListener = listener
+}
+
+export function announceJobEdited(before: JobDraft): void {
+  editListener?.(before)
 }

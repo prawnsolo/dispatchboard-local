@@ -46,6 +46,11 @@ function boot(): Promise<SqlJs> {
     const SQL = await initSqlJs({ locateFile: () => wasmUrl })
     const raw = new SQL.Database() as unknown as SqlJs
     const adapter = wrap(raw)
+    // `?empty=1` skips the sample jobs so empty states and the first-run screen can be seen.
+    if (new URLSearchParams(location.search).get('empty') === '1') {
+      await applyImport(adapter, [], { updateMatched: true })
+      return raw
+    }
     const rows = recordsFromBytes(new TextEncoder().encode(csv))
     await applyImport(adapter, rows, { updateMatched: true })
     const jobs = await adapter.select<{ id: number }>('SELECT id FROM jobs WHERE is_capacity_block = 0 ORDER BY id')

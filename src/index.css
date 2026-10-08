@@ -181,3 +181,13 @@ button:disabled {
   font-weight: 600;
   color: #fff;
 }
+
+/* Day sheet printing: only #print-root prints, on white paper. */
+#print-root { display: none; }
+@media print {
+  #root { display: none !important; }
+  #print-root { display: block; background: #fff; color: #111; }
+  body { background: #fff !important; }
+  .print-page { break-after: page; }
+  .print-page:last-child { break-after: auto; }
+}

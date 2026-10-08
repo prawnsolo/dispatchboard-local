@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ErrorNote } from '../components/ErrorNote.tsx'
+import { PrintDaySheet } from '../components/PrintDaySheet.tsx'
 import { JobIcon } from '../components/JobIcon.tsx'
+import { Icon } from '../components/Icon.tsx'
 import { JobTypeChips, countJobTypes } from '../components/JobTypeChips.tsx'
 import { queryJobs } from '../lib/db.ts'
 import { formatDate, formatTimeRange, todayInNewYork } from '../lib/format.ts'
@@ -28,6 +30,7 @@ export function TodayScreen({
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<unknown>(null)
+  const [printing, setPrinting] = useState<{ tech: string | null } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -69,12 +72,26 @@ export function TodayScreen({
 
   return (
     <div className="min-h-0 flex-1 overflow-auto px-chrome py-4" data-testid="today-screen">
+      {printing ? <PrintDaySheet jobs={jobs} date={date} tech={printing.tech} onDone={() => setPrinting(null)} /> : null}
       <div className="mx-auto max-w-5xl">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-xl font-semibold text-ink">{label}</h2>
-          <p className="text-sm text-slate-600" data-testid="today-summary">
-            {work.length} {work.length === 1 ? 'job' : 'jobs'} · {crew.length} working · {out.length} out
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-slate-600" data-testid="today-summary">
+              {work.length} {work.length === 1 ? 'job' : 'jobs'} · {crew.length} working · {out.length} out
+            </p>
+            {work.length ? (
+              <button
+                type="button"
+                data-testid="print-all"
+                onClick={() => setPrinting({ tech: null })}
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+              >
+                <Icon name="printer" size={14} />
+                Print day sheets
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <ErrorNote className="mt-3 text-sm" error={error} />
@@ -126,8 +143,17 @@ export function TodayScreen({
                   <article key={tech} className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm" data-testid="today-tech">
                     <div className="flex items-baseline justify-between gap-2">
                       <h4 className="truncate text-sm font-semibold text-ink">{tech}</h4>
-                      <span className="shrink-0 text-meta tabular-nums text-slate-600">
+                      <span className="flex shrink-0 items-center gap-2 text-meta tabular-nums text-slate-600">
                         {theirs.length} {theirs.length === 1 ? 'job' : 'jobs'}
+                        <button
+                          type="button"
+                          onClick={() => setPrinting({ tech })}
+                          aria-label={`Print day sheet for ${tech}`}
+                          title={`Print day sheet for ${tech}`}
+                          className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        >
+                          <Icon name="printer" size={14} />
+                        </button>
                       </span>
                     </div>
                     {load ? (

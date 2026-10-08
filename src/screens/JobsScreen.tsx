@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { JobDrawer } from '../components/JobDrawer.tsx'
+import { ActivityCell } from '../components/ActivityCell.tsx'
 import { JobMarks } from '../components/JobMarks.tsx'
 import { queryDates, queryJobs } from '../lib/db.ts'
 import { formatDate, formatTimeRange } from '../lib/format.ts'
@@ -236,7 +237,7 @@ export function JobsScreen({
                     </div>
                   </td>
                   <td className="px-2 py-1" title={job.activity_note ?? undefined}>
-                    {job.activity_1 ?? '—'}
+                    <ActivityCell job={job} />
                   </td>
                   <td className="px-2 py-1">{job.city ?? '—'}</td>
                   <td className="px-2 py-1">{job.address_street ?? job.address_raw ?? '—'}</td>

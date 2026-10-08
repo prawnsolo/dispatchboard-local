@@ -7,6 +7,7 @@ import { circlePolygon, type ProximityCenter } from '../lib/proximity.ts'
 import { useTheme } from '../lib/theme.tsx'
 import { ensureMapLibreWorker } from '../lib/maplibre-worker.ts'
 import { YARD } from '../lib/yard.ts'
+import { GLYPH_PIXEL_RATIO, loadPinGlyphs } from '../lib/pin-glyphs.ts'
 
 const FREDERICKSBURG: [number, number] = [-77.4605, 38.3032]
 const STYLE = 'https://tiles.openfreemap.org/styles/liberty'
@@ -26,6 +27,8 @@ export type MapPinJob = {
   schedule: 'tentative' | 'scheduled' | 'locked'
   /** Checklist flag only (office map ⚑ layer). */
   flag: boolean
+  /** Map image id for the job-type glyph, e.g. `ji-tank-light`. */
+  glyph: string
   /** Hover popup fields (web job-quick-view parity). */
   customer_number?: string | null
   address_street?: string | null
@@ -129,13 +132,36 @@ function ensureJobLayers(map: maplibregl.Map, dark: boolean): void {
       source: 'jobs',
       paint: {
         'circle-color': ['get', 'color'],
-        'circle-radius': 7,
+        'circle-radius': ['interpolate', ['linear'], ['zoom'], 8, 6, 10.5, 10, 12, 13],
         'circle-stroke-width': ['case', ['==', ['get', 'schedule'], 'locked'], 2.4, 2],
         'circle-stroke-color': ['get', 'stroke'],
         'circle-opacity': 0.95,
       },
     })
   }
+  if (!map.getLayer('jobs-icons')) {
+    map.addLayer({
+      id: 'jobs-icons',
+      type: 'symbol',
+      source: 'jobs',
+      minzoom: 10.5,
+      layout: {
+        'icon-image': ['get', 'glyph'],
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 10.5, 0.62, 12, 0.82],
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+      },
+    })
+  }
+  void loadPinGlyphs().then((images) => {
+    for (const [id, data] of images) {
+      try {
+        if (!map.hasImage(id)) map.addImage(id, data, { pixelRatio: GLYPH_PIXEL_RATIO })
+      } catch {
+        // map was removed while the glyphs were drawing
+      }
+    }
+  })
   if (!map.getLayer('jobs-flags')) {
     map.addLayer({
       id: 'jobs-flags',
@@ -405,15 +431,22 @@ export function LocalMap({
           stroke: dark && job.schedule === 'locked' ? DARK_LOCKED_STROKE : job.stroke,
           schedule: job.schedule,
           flag: job.flag ? 1 : 0,
+          glyph: job.glyph,
         },
       }))
       jobsSrc.setData({ type: 'FeatureCollection', features })
       if (map.getLayer('jobs-circles')) {
+        const picked = ['==', ['to-number', ['get', 'id']], selectedId ?? -1]
         map.setPaintProperty('jobs-circles', 'circle-radius', [
-          'case',
-          ['==', ['to-number', ['get', 'id']], selectedId ?? -1],
-          11,
-          7,
+          'interpolate',
+          ['linear'],
+          ['zoom'],
+          8,
+          ['case', picked, 9, 6],
+          10.5,
+          ['case', picked, 13, 10],
+          12,
+          ['case', picked, 16, 13],
         ])
         map.setPaintProperty('jobs-circles', 'circle-stroke-width', [
           'case',
@@ -429,6 +462,13 @@ export function LocalMap({
           proximity ? ['case', ['==', ['to-number', ['get', 'nearby']], 1], 0.95, 0.18] : 0.95,
         )
       }
+      if (map.getLayer('jobs-icons')) {
+        map.setPaintProperty(
+          'jobs-icons',
+          'icon-opacity',
+          proximity ? ['case', ['==', ['to-number', ['get', 'nearby']], 1], 1, 0.25] : 1,
+        )
+      }
       if (map.getLayer('jobs-halo')) {
         map.setPaintProperty('jobs-halo', 'circle-stroke-width', [
           'case',
@@ -439,8 +479,8 @@ export function LocalMap({
         map.setPaintProperty('jobs-halo', 'circle-radius', [
           'case',
           ['==', ['to-number', ['get', 'id']], selectedId ?? -1],
+          17,
           14,
-          11,
         ])
       }
       const backlogSrc = map.getSource('backlog') as maplibregl.GeoJSONSource | undefined

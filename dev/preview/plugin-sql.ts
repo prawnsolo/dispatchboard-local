@@ -56,6 +56,11 @@ function boot(): Promise<SqlJs> {
         [p.lat, p.lng, id],
       )
     }
+    // The sample export has no fireplace cleaning call. Give the maintenance job one
+    // so the gas-log icon shows up in screenshots.
+    await adapter.execute(
+      "UPDATE jobs SET location_definition = 'GAS LOGS, FIREPLACE' WHERE activity_1 LIKE 'PREV MAINT%'",
+    )
     await shiftDatesToToday(adapter)
     return raw
   })()

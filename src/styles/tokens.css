@@ -169,13 +169,8 @@ textarea {
 }
 
 .db-capacity {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--capacity-a),
-    var(--capacity-a) 5px,
-    var(--capacity-b) 5px,
-    var(--capacity-b) 10px
-  );
+  /* Flat muted fill. The leave or training icon says what it is. */
+  background-color: var(--capacity-b);
 }
 
 /* Map controls follow the theme. */

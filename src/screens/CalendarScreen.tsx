@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CALENDAR_KIND_LEGEND_CLASS } from '../lib/colors.ts'
+import { JobTypeChips, countJobTypes } from '../components/JobTypeChips.tsx'
 import { JobDrawer } from '../components/JobDrawer.tsx'
 import { ResourceDayGrid } from '../components/ResourceDayGrid.tsx'
 import { ResourceWeekGrid } from '../components/ResourceWeekGrid.tsx'
@@ -8,6 +9,7 @@ import { formatDate } from '../lib/format.ts'
 import {
   addDaysYmd,
   firstScheduledDate,
+  isCapacityBlock,
   jobsInRange,
   jobsOnDate,
   uniqueTechs,
@@ -39,6 +41,7 @@ export function CalendarScreen({
 }) {
   const [view, setView] = useState<CalView>('timegrid')
   const [jobs, setJobs] = useState<JobRow[]>([])
+  const dayTypes = useMemo(() => countJobTypes(jobs.filter((job) => !isCapacityBlock(job))), [jobs])
   const [error, setError] = useState<string | null>(null)
   const [persistError, setPersistError] = useState<string | null>(null)
   const [draft, setDraft] = useState<JobDraft | null>(null)
@@ -157,9 +160,13 @@ export function CalendarScreen({
         <span className={CALENDAR_KIND_LEGEND_CLASS.tentative}>Tentative · drag</span>
         <span className={CALENDAR_KIND_LEGEND_CLASS.in_pegasus}>In Pegasus · locked</span>
         <span className={CALENDAR_KIND_LEGEND_CLASS.capacity}>Capacity</span>
-        <span className="text-slate-400">Left border = activity color</span>
         <span>{formatDate(date)}</span>
       </div>
+      {dayTypes.length ? (
+        <div className="shrink-0 border-b border-slate-200 bg-white px-chrome py-1.5">
+          <JobTypeChips types={dayTypes} />
+        </div>
+      ) : null}
 
       {error ? (
         <p className="px-4 py-2 text-sm text-error">

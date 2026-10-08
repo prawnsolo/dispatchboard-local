@@ -12,6 +12,9 @@ import { checkLocalDriveTimes, geocodeLocalJobs, queryBacklog, queryJobs } from 
 import { driveTimeEligibility, type DriveLeg } from '../lib/drive-times.ts'
 import { todayInNewYork } from '../lib/format.ts'
 import { jobPinColor, mapScheduleSignal, mapScheduleStroke } from '../lib/colors.ts'
+import { JobTypeChips, countJobTypes, jobTypeKey } from '../components/JobTypeChips.tsx'
+import { glyphToneFor, jobIcon } from '../lib/job-icons.ts'
+import { glyphId } from '../lib/pin-glyphs.ts'
 import { asCoord, jobHasMappedPin } from '../lib/geocode.ts'
 import { readGoogleMapsApiKey, useHasGoogleMapsApiKey } from '../lib/google-key.ts'
 import { ALLOW_NETWORK_GEOCODING_CONFIRM, isMapTechVisible, useAllowNetworkGeocoding, useMapHiddenTechs } from '../lib/prefs.ts'
@@ -73,6 +76,7 @@ export function MapScreen({
   const [geocoding, setGeocoding] = useState(false)
   const [geoNote, setGeoNote] = useState<string | null>(null)
   const [techFilter, setTechFilter] = useState('')
+  const [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<string>>(new Set())
   const [driveLegs, setDriveLegs] = useState<DriveLeg[]>([])
   const [driveError, setDriveError] = useState<string | null>(null)
   const [driveFromCache, setDriveFromCache] = useState(false)
@@ -158,7 +162,12 @@ export function MapScreen({
     const byVis = dayJobs.filter((job) => isMapTechVisible(techKey(job.technician_name), hiddenTechs))
     return techFilter ? byVis.filter((job) => techKey(job.technician_name) === techFilter) : byVis
   }, [dayJobs, techFilter, hiddenTechs])
-  const unmapped = useMemo(() => visible.filter((job) => !jobHasMappedPin(job)), [visible])
+  const typeCounts = useMemo(() => countJobTypes(visible), [visible])
+  const shown = useMemo(
+    () => (hiddenTypes.size ? visible.filter((job) => !hiddenTypes.has(jobTypeKey(job))) : visible),
+    [visible, hiddenTypes],
+  )
+  const unmapped = useMemo(() => shown.filter((job) => !jobHasMappedPin(job)), [shown])
   const radiusMiles = minutesToMiles(radiusMinutes)
   const distances = useMemo(
     () => (center ? nearbyJobDistances(visible, center, radiusMiles) : null),
@@ -167,7 +176,7 @@ export function MapScreen({
 
   const pins: MapPinJob[] = useMemo(() => {
     const out: MapPinJob[] = []
-    for (const job of visible) {
+    for (const job of shown) {
       const lat = asCoord(job.lat)
       const lng = asCoord(job.lng)
       if (lat == null || lng == null || !jobHasMappedPin(job)) continue
@@ -179,6 +188,7 @@ export function MapScreen({
         lng,
         nearby: distances ? distances.has(String(job.id)) : false,
         color: jobPinColor(job),
+        glyph: glyphId(jobIcon(job).icon, glyphToneFor(jobPinColor(job))),
         stroke: mapScheduleStroke(job),
         schedule,
         flag: Number(job.checklist_open) > 0,
@@ -195,7 +205,7 @@ export function MapScreen({
       })
     }
     return out
-  }, [distances, visible])
+  }, [distances, shown])
 
   const bootsFlags = useMemo(() => bootsFlagsForJobs(allJobs), [allJobs])
 
@@ -437,8 +447,25 @@ export function MapScreen({
             </button>
           </div>
         ) : null}
+        {typeCounts.length > 1 ? (
+          <div className="border-b border-line bg-white px-chrome py-1.5">
+            <JobTypeChips
+              types={typeCounts}
+              hidden={hiddenTypes}
+              onToggle={(key) =>
+                setHiddenTypes((prev) => {
+                  const next = new Set(prev)
+                  if (next.has(key)) next.delete(key)
+                  else next.add(key)
+                  return next
+                })
+              }
+              onReset={() => setHiddenTypes(new Set())}
+            />
+          </div>
+        ) : null}
         <div
-          className="pointer-events-none absolute right-3 top-3 z-10 flex max-w-[min(36rem,calc(100%-1.5rem))] flex-col items-end gap-2"
+          className={`pointer-events-none absolute right-3 z-10 flex ${typeCounts.length > 1 ? 'top-14' : 'top-3'} max-w-[min(36rem,calc(100%-1.5rem))] flex-col items-end gap-2`}
           data-testid="map-overlay-tools"
         >
           <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-lg border border-slate-200 bg-white/95 px-2 py-1 shadow-sm">

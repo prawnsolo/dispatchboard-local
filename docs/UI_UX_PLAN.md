@@ -1,6 +1,6 @@
 # UI, UX and function plan
 
-Status: draft for Pilot to pick from. Nothing here is built yet except the preview mode (section 0).
+Status: draft for Pilot to pick from. Built so far: preview mode (section 0) and the icon system (section 2). Everything else is still a plan.
 
 Sources: a pass with the Impeccable detector on the app running against the synthetic fixture (61 sample jobs, 5 techs), screenshots in light and dark, and a read of the current components.
 
@@ -100,7 +100,7 @@ Confirmed by Pilot: in the real export a fireplace or gas log cleaning is logged
 
 - X1 Show the date picker and search only on screens where they apply. Import and Sheet do not need the day stepper.
 - X2 Slim the Map toolbar: Find, radius and Nearby behind a More menu.
-- X3 Remove the obsolete geocoding popup. It still opens on the Map even though lookups are automatic now.
+- X3 Move the "allow network geocoding" prompt out of the Map and into the first-run screen (X8), asked once. It is a privacy switch, so it stays off until Pilot says yes; it just should not ambush him on the Map.
 - X4 Keyboard shortcuts and a Ctrl+K command palette.
 - X5 Undo toasts after moves and edits.
 - X6 Remember window size and position.

@@ -1,0 +1,41 @@
+name: Build Windows installer
+
+# Produces DispatchBoard_Local_<version>_x64-setup.exe (unsigned NSIS installer).
+# Runs on any push to a build/** branch, on a v* tag, or by hand from the Actions tab.
+# Download it from the run page under "Artifacts".
+on:
+  push:
+    branches: ['build/**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tests
+        run: npm run test:local
+      - name: Build installer
+        run: npm run desktop:build
+      - name: Collect installer
+        shell: bash
+        run: |
+          mkdir -p dist-installer
+          cp src-tauri/target/release/bundle/nsis/*-setup.exe dist-installer/
+          ls -l dist-installer
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DispatchBoard-Local-Windows-installer
+          path: dist-installer/*.exe
+          if-no-files-found: error
+          retention-days: 30

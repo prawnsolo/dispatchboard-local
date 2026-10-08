@@ -3,6 +3,7 @@ import { geocodeLocalJobs, saveLocalJobAddress, saveLocalManualPin } from '../li
 import { parsePin } from '../lib/geocode.ts'
 import { GOOGLE_KEY_EVENT, readGoogleMapsApiKey } from '../lib/google-key.ts'
 import type { JobRow } from '../lib/store.ts'
+import { ErrorNote } from './ErrorNote.tsx'
 
 export function UnmappedFix({
   job,
@@ -174,7 +175,7 @@ export function UnmappedFix({
             <button
               type="button"
               onClick={onAllow}
-              className="rounded-md border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand-wash"
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
             >
               Allow network geocoding
             </button>
@@ -236,7 +237,7 @@ export function UnmappedFix({
             Close
           </button>
         </div>
-        {error ? <p className="mt-3 text-sm text-error">{error}</p> : null}
+        {error ? <ErrorNote className="mt-3 text-sm" error={error} /> : null}
         {note ? <p className="mt-3 text-sm text-ink">{note}</p> : null}
       </div>
     </div>

@@ -45,6 +45,8 @@ const PRIMARY_TABS = TABS.filter((tab) => tab.id !== 'planning')
 type TabId = (typeof TABS)[number]['id']
 
 /** Job views that the problems strip can filter. */
+/** Import has no day and no search, so its toolbar row is hidden. */
+const NO_TOOLBAR_TABS: ReadonlySet<string> = new Set(['import'])
 const PROBLEM_TABS: ReadonlySet<TabId> = new Set<TabId>(['map', 'calendar', 'jobs', 'sheet'])
 
 function tabFromHash(): TabId {
@@ -267,6 +269,7 @@ export function App() {
             ) : null}
           </div>
         </div>
+        {NO_TOOLBAR_TABS.has(tab) ? null : (
         <div
           className="mt-1.5 flex min-w-0 flex-wrap items-center gap-2"
           data-testid="chrome-row-2"
@@ -293,6 +296,7 @@ export function App() {
           ) : null}
           {tab === 'map' ? <MapChromeSlot /> : null}
         </div>
+        )}
       </header>
       {showProblems ? (
         <ProblemsStrip

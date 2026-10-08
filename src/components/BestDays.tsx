@@ -152,7 +152,7 @@ export function BestDays({
                             {ENABLE_JOB_CREATE ? (
                               <button
                                 type="button"
-                                className="rounded px-1.5 py-0.5 text-xs font-semibold text-brand hover:bg-brand-wash"
+                                className="rounded px-1.5 py-0.5 text-xs font-semibold text-slate-900 underline underline-offset-2 hover:bg-slate-100"
                                 data-testid="schedule-here"
                                 onClick={() => {
                                   const target = { date: day.date, tech: group.tech }

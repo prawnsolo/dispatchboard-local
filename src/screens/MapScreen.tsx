@@ -27,6 +27,7 @@ import { isCapacityBlock, techKey, uniqueTechs } from '../lib/schedule.ts'
 import { blankJobDraft, type JobRow } from '../lib/store.ts'
 import type { BacklogItem } from '../lib/backlog.ts'
 import { YARD } from '../lib/yard.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 function addressLine(job: JobRow): string {
   return [job.address_street, job.address_city_state_zip].filter(Boolean).join(', ') || job.address_raw || 'No address'
@@ -441,7 +442,7 @@ export function MapScreen({
             <button
               type="button"
               onClick={() => setPinDrop(false)}
-              className="font-semibold text-brand"
+              className="font-semibold text-slate-900 underline underline-offset-2"
             >
               Cancel drop
             </button>
@@ -501,7 +502,7 @@ export function MapScreen({
             <NearbyResult center={center} radiusMinutes={radiusMinutes} matchCount={distances?.size ?? 0} />
           ) : null}
           {geoNote ? <p className="pointer-events-auto rounded-lg border border-slate-200 bg-white/95 px-2 py-1 text-xs text-slate-700 shadow-sm">{geoNote}</p> : null}
-          {error ? <p className="pointer-events-auto text-sm text-error">{error}</p> : null}
+          {error ? <ErrorNote className="pointer-events-auto text-sm" error={error} /> : null}
         </div>
 
         <div className="absolute bottom-3 left-3 z-10 w-[min(20rem,calc(100%-1.5rem))] space-y-2">
@@ -540,7 +541,7 @@ export function MapScreen({
                         setDropped(null)
                         setPinDrop(false)
                       }}
-                      className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded px-2 text-xs font-semibold text-brand-700 hover:bg-brand-wash"
+                      className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded px-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
                     >
                       Fix
                     </button>
@@ -576,7 +577,7 @@ export function MapScreen({
                     setFixId(selected.id)
                     setDropped(null)
                   }}
-                  className="mt-1 font-semibold text-brand-600"
+                  className="mt-1 font-semibold text-slate-900 underline underline-offset-2"
                 >
                   Fix unmapped
                 </button>
@@ -595,7 +596,7 @@ export function MapScreen({
                   ? ` · ${selectedBacklog.address_street || selectedBacklog.address_raw}`
                   : ''}
               </p>
-              <a href="#/backlog" className="mt-1 inline-block font-semibold text-brand-600">
+              <a href="#/backlog" className="mt-1 inline-block font-semibold text-slate-900 underline underline-offset-2">
                 Open backlog
               </a>
             </div>

@@ -3,6 +3,7 @@ import { ensureMapLibreWorker } from './lib/maplibre-worker.ts'
 import { createRoot } from 'react-dom/client'
 import { App } from './App.tsx'
 import { ThemeProvider } from './lib/theme.tsx'
+import '@fontsource-variable/inter'
 import './index.css'
 
 ensureMapLibreWorker()

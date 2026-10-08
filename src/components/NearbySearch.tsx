@@ -1,3 +1,4 @@
+import { Icon } from './Icon.tsx'
 import { useId, useState } from 'react'
 import {
   geocodeSearchCandidates,
@@ -62,6 +63,9 @@ export function NearbySearch({
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [choices, setChoices] = useState<ProximityCenter[] | null>(null)
+  const [open, setOpen] = useState(false)
+  // Stays open while a search is active so the Clear button is reachable.
+  const expanded = open || center != null || !!error || choices != null
 
   async function search() {
     const address = query.trim()
@@ -85,6 +89,20 @@ export function NearbySearch({
     } finally {
       setSearching(false)
     }
+  }
+
+  if (!expanded) {
+    return (
+      <button
+        type="button"
+        data-testid="nearby-open"
+        onClick={() => setOpen(true)}
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50"
+      >
+        <Icon name="map-pin" size={14} />
+        Nearby
+      </button>
+    )
   }
 
   return (
@@ -111,7 +129,7 @@ export function NearbySearch({
             void search()
           }
         }}
-        className="h-8 w-36 rounded-lg border xl:w-44 border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-500 disabled:bg-slate-100"
+        className="h-8 w-36 rounded-lg border xl:w-44 border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-brand-500 disabled:bg-slate-100 disabled:text-slate-500"
       />
       <label className="sr-only" htmlFor={`${inputId}-radius`}>
         Straight-line radius
@@ -133,13 +151,26 @@ export function NearbySearch({
         type="button"
         disabled={!allowed || searching || !query.trim()}
         onClick={() => void search()}
-        className="h-8 rounded-lg bg-brand-600 px-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+        className="h-8 rounded-lg bg-brand-600 px-2.5 text-sm font-medium text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500"
       >
         {searching ? 'Searching…' : 'Find'}
       </button>
       {!allowed ? (
-        <button type="button" onClick={onAllow} className="h-8 text-meta font-medium text-brand-600 hover:underline">
+        <button type="button" onClick={onAllow} className="h-8 text-meta font-medium text-slate-900 underline underline-offset-2">
           Allow geocoding
+        </button>
+      ) : null}
+      {!center ? (
+        <button
+          type="button"
+          onClick={() => {
+            setOpen(false)
+            setError(null)
+            setChoices(null)
+          }}
+          className="h-8 rounded-lg px-1.5 text-sm font-medium text-slate-600 hover:text-slate-900"
+        >
+          Close
         </button>
       ) : null}
       {center ? (

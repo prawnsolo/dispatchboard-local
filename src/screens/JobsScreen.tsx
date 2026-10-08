@@ -6,6 +6,7 @@ import { queryDates, queryJobs } from '../lib/db.ts'
 import { formatDate, formatTimeRange } from '../lib/format.ts'
 import { blankJobDraft, draftFromJob, type DateCount, type JobDraft, type JobRow } from '../lib/store.ts'
 import { ENABLE_JOB_CREATE } from '../lib/features.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 export function JobsScreen({
   revision,
@@ -143,13 +144,7 @@ export function JobsScreen({
         </div>
       ) : null}
 
-      {error ? (
-        <p className="mt-4 text-sm text-error">
-          {/invoke/.test(error)
-            ? 'This window cannot open SQLite. Start the desktop app with npm run desktop.'
-            : error}
-        </p>
-      ) : null}
+      {error ? <ErrorNote className="mt-4 text-sm" error={error} /> : null}
 
       {!error && !loading && shown.length === 0 ? (
         <div className="mt-4 max-w-xl">

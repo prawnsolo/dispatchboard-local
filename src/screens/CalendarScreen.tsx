@@ -20,6 +20,7 @@ import { ptoDayKeys } from '../lib/pto.ts'
 import { techDayLoads } from '../lib/techLoad.ts'
 import { draftFromJob, type JobDraft, type JobRow, type ScheduleMove } from '../lib/store.ts'
 import { snapshotFromJob, type ScheduleSnapshot } from '../lib/undo.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 type CalView = 'timegrid' | 'week'
 
@@ -168,21 +169,15 @@ export function CalendarScreen({
         </div>
       ) : null}
 
-      {error ? (
-        <p className="px-4 py-2 text-sm text-error">
-          {/invoke/.test(error)
-            ? 'This window cannot open SQLite. Start the desktop app with npm run desktop.'
-            : error}
-        </p>
-      ) : null}
-      {persistError ? <p className="px-4 py-1 text-sm text-error">{persistError}</p> : null}
+      {error ? <ErrorNote className="px-4 py-2 text-sm" error={error} /> : null}
+      {persistError ? <ErrorNote className="px-4 py-1 text-sm" error={persistError} /> : null}
 
       {emptyHere && sampleDate ? (
         <div className="border-b border-line px-4 py-2">
           <button
             type="button"
             onClick={() => onDateChange(sampleDate)}
-            className="text-sm font-semibold text-brand hover:underline"
+            className="text-sm font-semibold text-slate-900 underline underline-offset-2"
           >
             {view === 'timegrid' ? 'Jump to a day with jobs' : 'Jump to a week with jobs'}
           </button>

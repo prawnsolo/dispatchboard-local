@@ -10,6 +10,7 @@ import {
 import type { MismatchRuleDraft } from '../lib/mismatch.ts'
 import type { TemplateDraft, TemplateDraftItem } from '../lib/templates.ts'
 import type { MismatchRuleRow, TemplateRow } from '../lib/store.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 const controlClass =
   'mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm normal-case tracking-normal text-ink outline-none focus:border-brand'
@@ -146,7 +147,7 @@ function MismatchSection({ revision }: { revision: number }) {
         On Apply, a job is flagged when a call reason contains the pattern and the activity note contains the keyword.
         Capacity blocks are not flagged. The seeded example is GAS CHECK ↔ CLEANING.
       </p>
-      {error ? <p className="mt-2 text-sm text-error">{error}</p> : null}
+      {error ? <ErrorNote className="mt-2 text-sm" error={error} /> : null}
       <ul className="mt-3 divide-y divide-line border-y border-line">
         {rules.map((rule) => (
           <li key={rule.id} className="py-3">
@@ -369,7 +370,7 @@ function TemplateSection({ revision }: { revision: number }) {
           New template
         </button>
       </div>
-      {error ? <p className="mt-2 text-sm text-error">{error}</p> : null}
+      {error ? <ErrorNote className="mt-2 text-sm" error={error} /> : null}
       <ul className="mt-3 divide-y divide-line border-y border-line">
         {templates.map((template) => (
           <li key={template.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
@@ -462,7 +463,7 @@ function TemplateSection({ revision }: { revision: number }) {
             <button
               type="button"
               onClick={() => setDraft((current) => ({ ...current, items: [...current.items, { label: '', is_required: true }] }))}
-              className="text-sm font-semibold text-brand"
+              className="text-sm font-semibold text-slate-900 underline underline-offset-2"
             >
               Add item
             </button>

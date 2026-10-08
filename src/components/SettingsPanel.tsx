@@ -1,3 +1,4 @@
+import { ErrorNote } from './ErrorNote.tsx'
 import { useEffect, useId, useState } from 'react'
 import {
   CLEAR_SCHEDULED_CONFIRM,
@@ -241,7 +242,7 @@ function GoogleKeySetting() {
           Saving a key needs the desktop app (<code>npm run desktop</code>).
         </p>
       ) : null}
-      {error && !unavailable ? <p className="mt-2 text-sm text-error">{error}</p> : null}
+      {error && !unavailable ? <ErrorNote className="mt-2 text-sm" error={error} /> : null}
       {note ? <p className="mt-2 text-sm text-ink-body">{note}</p> : null}
       {testNote ? (
         <p
@@ -639,7 +640,7 @@ export function SettingsPanel({
                     </div>
                   </div>
                 )}
-                {clearError ? <p className="mt-2 text-sm text-error">{clearError}</p> : null}
+                {clearError ? <ErrorNote className="mt-2 text-sm" error={clearError} /> : null}
                 {clearMessage ? (
                   <p className="mt-2 text-sm text-ink-body" data-testid="clear-scheduled-result">
                     {clearMessage}
@@ -653,7 +654,7 @@ export function SettingsPanel({
                 <button type="button" disabled={wiping || Boolean(pathError)} onClick={() => void onWipe()} className={`mt-3 ${buttonClass}`}>
                   {wiping ? 'Wiping…' : 'Wipe local database'}
                 </button>
-                {wipeError ? <p className="mt-2 text-sm text-error">{wipeError}</p> : null}
+                {wipeError ? <ErrorNote className="mt-2 text-sm" error={wipeError} /> : null}
               </section>
             </>
           ) : null}

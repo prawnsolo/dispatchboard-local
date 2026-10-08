@@ -46,7 +46,7 @@ export function DateChip({ date, onChange }: { date: string; onChange: (ymd: str
         aria-haspopup="dialog"
         onClick={() => setOpen((value) => !value)}
         className={`inline-flex h-8 items-center rounded-lg border bg-white px-2.5 text-sm font-medium tabular-nums ${
-          date === today ? 'border-brand-500 text-brand-600' : 'border-slate-300 text-slate-900 hover:bg-slate-50'
+          'border-slate-300 text-slate-900 hover:bg-slate-50'
         }`}
       >
         {formatDateChip(date)}
@@ -64,8 +64,8 @@ export function DateChip({ date, onChange }: { date: string; onChange: (ymd: str
         onClick={() => onChange(today)}
         className={`inline-flex h-8 items-center rounded-lg border px-2.5 text-sm font-medium ${
           date === today
-            ? 'border-brand-600 bg-brand-600 text-white'
-            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+            ? 'border-slate-200 bg-slate-100 text-slate-500'
+            : 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50'
         }`}
       >
         Today

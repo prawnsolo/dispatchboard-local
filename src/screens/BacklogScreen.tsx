@@ -15,6 +15,7 @@ import {
 } from '../lib/backlog.ts'
 import { deleteLocalBacklog, promoteLocalBacklog, queryBacklog, saveLocalBacklog } from '../lib/db.ts'
 import { ENABLE_JOB_CREATE } from '../lib/features.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 const controlClass =
   'w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink outline-none placeholder:text-ink-label focus:border-brand'
@@ -178,14 +179,12 @@ export function BacklogScreen({
             New item
           </button>
         </div>
-        <p className="mt-2 text-xs text-ink-label">
+        <p className="mt-2 max-w-prose text-xs text-slate-600">
           Tank pickup, lockout, monitor swap, and meter site stay here until you promote one into a tentative job.
           ADD import does not write this list.
         </p>
         {error && !draft ? (
-          <p className="mt-2 text-sm text-error" role="alert">
-            {error}
-          </p>
+          <ErrorNote className="mt-2 text-sm" error={error} />
         ) : null}
         <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
           <table className="w-full border-collapse text-left text-sm">
@@ -250,9 +249,7 @@ export function BacklogScreen({
             </button>
           </div>
           {error ? (
-            <p className="text-sm text-error" role="alert">
-              {error}
-            </p>
+            <ErrorNote className="text-sm" error={error} />
           ) : null}
           <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
             Type

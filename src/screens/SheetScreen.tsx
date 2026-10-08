@@ -15,6 +15,7 @@ import {
   type SheetSort,
 } from '../lib/sheet.ts'
 import type { JobRow } from '../lib/store.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 const cellInput =
   'h-8 w-full min-w-0 border-0 bg-transparent px-1.5 text-cell text-slate-900 outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 disabled:text-slate-500'
@@ -247,14 +248,14 @@ export function SheetScreen({
           Download CSV
         </button>
       </div>
-      <p className="border-b border-slate-200 px-chrome py-1 text-meta text-slate-500">
-        Edit a cell and leave it to save. Jobs, Calendar, and Map use the same rows. Capacity blocks edit the label,
-        technician, date, times, and activity. Work order numbers stay as imported.
-      </p>
-      {error ? (
-        <p className="mt-2 text-sm text-error" role="alert">
-          {error}
+      <div className="border-b border-slate-200 px-chrome py-1">
+        <p className="max-w-prose text-meta text-slate-600">
+          Edit a cell and leave it to save. Jobs, Calendar, and Map use the same rows. Capacity blocks edit the label,
+          technician, date, times, and activity. Work order numbers stay as imported.
         </p>
+      </div>
+      {error ? (
+        <ErrorNote className="mt-2 text-sm" error={error} />
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto bg-white">
         <table className="border-collapse text-left text-cell">

@@ -6,6 +6,7 @@ import { readLastApply, writeLastApply, type LastApplyRecord } from '../lib/last
 import { ALLOW_NETWORK_GEOCODING_CONFIRM, useAllowNetworkGeocoding } from '../lib/prefs.ts'
 import type { LocalGeocodeSummary } from '../lib/geocode-db.ts'
 import type { ApplyStats } from '../lib/store.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024
 
@@ -224,7 +225,7 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
           />
         </label>
         {preview ? <p className="mt-3 text-sm text-ink">{preview.fileName}</p> : null}
-        {parseError ? <p className="mt-3 text-sm text-error">{parseError}</p> : null}
+        {parseError ? <ErrorNote className="mt-3 text-sm" error={parseError} /> : null}
       </section>
 
       {preview ? (
@@ -274,11 +275,11 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
             >
               {applying ? (geocodeAfter ? 'Writing and geocoding…' : 'Writing…') : 'Apply to local database'}
             </button>
-            <a href="#/jobs" className="rounded-md border border-brand px-6 py-3 text-[15px] font-semibold text-brand hover:bg-brand-wash">
+            <a href="#/jobs" className="rounded-md border border-slate-300 px-6 py-3 text-[15px] font-semibold text-slate-900 hover:bg-slate-50">
               Open jobs
             </a>
           </div>
-          {applyError ? <p className="mt-3 text-sm text-error">{applyError}</p> : null}
+          {applyError ? <ErrorNote className="mt-3 text-sm" error={applyError} /> : null}
           {stats && lastApply ? (
             <>
               <ApplyCounts record={{ ...lastApply, ...stats }} />

@@ -23,6 +23,7 @@ import {
 import { SHEET_CAPACITY_KEYS, SHEET_DRAFT_KEYS, type SheetPatch } from './sheet.ts'
 import { itemsToCopyFromTemplate, parseTemplateDraft, sortTemplateItems, suggestTemplateId, type TemplateDraft } from './templates.ts'
 import { ENABLE_JOB_CREATE } from './features.ts'
+import { HISTORY_INDEX_SQL, HISTORY_SQL, tracked } from './history.ts'
 
 /**
  * On-disk schema: jobs + sites, stage 3 geocode columns and geocode_cache,
@@ -393,7 +394,7 @@ async function seedTankTemplate(db: SqlDb, name: string, activity: string, color
  * Bump when a migration is added. Stored in `PRAGMA user_version` so an older
  * build never opens (and silently mangles) a database written by a newer one.
  */
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 export async function checkSchemaVersion(db: SqlDb): Promise<void> {
   const rows = await db.select<{ user_version: number }>('PRAGMA user_version')
@@ -416,6 +417,8 @@ export async function ensureSchema(db: SqlDb): Promise<void> {
     await migrateGeoColumns(db)
     await migrateStage4(db)
     await migrateStage5(db)
+    await db.execute(HISTORY_SQL)
+    await db.execute(HISTORY_INDEX_SQL)
     await db.execute(`PRAGMA user_version = ${SCHEMA_VERSION}`)
     schemaReady!.add(db)
   })()
@@ -648,6 +651,7 @@ export async function countRows(db: SqlDb): Promise<{ jobs: number; sites: numbe
 export async function wipeDatabase(db: SqlDb): Promise<void> {
   await ensureSchema(db)
   await db.execute('DELETE FROM job_checklist_items')
+  await db.execute('DELETE FROM job_history')
   await db.execute('DELETE FROM drive_time_cache')
   await db.execute('DELETE FROM backlog_items')
   await db.execute('DELETE FROM jobs')
@@ -962,6 +966,11 @@ function requireInsertId(result: SqlExecResult): number {
  */
 export async function saveJob(db: SqlDb, draft: JobDraft): Promise<{ id: number }> {
   await ensureSchema(db)
+  if (draft.id != null) return tracked(db, draft.id, 'edit', () => saveJobUntracked(db, draft))
+  return saveJobUntracked(db, draft)
+}
+
+async function saveJobUntracked(db: SqlDb, draft: JobDraft): Promise<{ id: number }> {
 
   if (draft.id == null) {
     if (!ENABLE_JOB_CREATE) {
@@ -1106,6 +1115,10 @@ const UPDATE_SCHEDULE = `UPDATE jobs SET
  */
 export async function moveJobSchedule(db: SqlDb, id: number, move: ScheduleMove): Promise<void> {
   await ensureSchema(db)
+  return tracked(db, id, 'move', () => moveJobUntracked(db, id, move))
+}
+
+async function moveJobUntracked(db: SqlDb, id: number, move: ScheduleMove): Promise<void> {
   const existing = await db.select<JobRow>(`SELECT ${JOB_COLUMNS} FROM jobs WHERE id = ? LIMIT 1`, [id])
   const current = existing[0]
   if (!current) throw new Error('That job is no longer in the local database.')
@@ -1146,6 +1159,11 @@ export async function clearScheduledJobs(db: SqlDb): Promise<number> {
   )
   await db.execute(
     `DELETE FROM job_checklist_items WHERE job_id IN (
+       SELECT id FROM jobs WHERE schedule_date IS NOT NULL AND trim(schedule_date) != ''
+     )`,
+  )
+  await db.execute(
+    `DELETE FROM job_history WHERE job_id IN (
        SELECT id FROM jobs WHERE schedule_date IS NOT NULL AND trim(schedule_date) != ''
      )`,
   )
@@ -1708,6 +1726,10 @@ const CAPACITY_SHEET_LOCKED =
  */
 export async function applySheetPatch(db: SqlDb, id: number, patch: SheetPatch): Promise<void> {
   await ensureSchema(db)
+  return tracked(db, id, 'sheet', () => applySheetPatchUntracked(db, id, patch))
+}
+
+async function applySheetPatchUntracked(db: SqlDb, id: number, patch: SheetPatch): Promise<void> {
   const existing = await db.select<JobRow>(`SELECT ${JOB_COLUMNS} FROM jobs WHERE id = ? LIMIT 1`, [id])
   const current = existing[0]
   if (!current) throw new Error('That job is no longer in the local database.')

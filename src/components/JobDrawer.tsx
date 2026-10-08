@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { JobChecklist } from './JobChecklist.tsx'
+import { JobHistory } from './JobHistory.tsx'
 import { zoneCodeFromServiceZone } from '../lib/add.ts'
 import { applyLocalTemplate, saveLocalJob } from '../lib/db.ts'
 import { announceJobEdited } from '../lib/undo.ts'
@@ -357,6 +358,7 @@ export function JobDrawer({
             />
           )}
 
+          {form.id != null ? <JobHistory jobId={form.id} /> : null}
         </form>
 
         <div className="border-t border-line px-5 py-3">

@@ -19,11 +19,13 @@ import type { SheetPatch } from './sheet.ts'
 import type { TemplateDraft } from './templates.ts'
 import { ENABLE_JOB_CREATE } from './features.ts'
 import { diffImport, type ImportDiff } from './import-diff.ts'
+import { listHistory, type HistoryEntry } from './history.ts'
 import {
   applyImport,
   applySheetPatch,
   applyTemplateToJob,
   clearScheduledJobs,
+  ensureSchema,
   countRows,
   deleteBacklog,
   deleteMismatchRule,
@@ -108,6 +110,12 @@ export async function applyRows(rows: ParsedRow[], options: ApplyOptions): Promi
 /** What applying these rows would change. Read-only. */
 export async function previewImportDiff(rows: ParsedRow[]): Promise<ImportDiff> {
   return diffImport(await open(), rows)
+}
+
+export async function queryJobHistory(jobId: number): Promise<HistoryEntry[]> {
+  const db = await open()
+  await ensureSchema(db)
+  return listHistory(db, jobId)
 }
 
 export async function queryJobs(filter: { date: string; query: string }): Promise<JobRow[]> {

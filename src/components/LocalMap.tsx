@@ -271,7 +271,7 @@ export function LocalMap({
       if (/webgl/i.test(message)) setMapError(message)
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right')
-    map.addControl(new maplibregl.ScaleControl({ maxWidth: 100 }), 'bottom-left')
+    map.addControl(new maplibregl.ScaleControl({ maxWidth: 100 }), 'bottom-right')
     yardRef.current = new maplibregl.Marker({ element: yardMarkerEl(), anchor: 'bottom' })
       .setLngLat([YARD.lng, YARD.lat])
       .addTo(map)

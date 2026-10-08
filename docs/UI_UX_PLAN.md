@@ -1,6 +1,6 @@
 # UI, UX and function plan
 
-Status: draft for Pilot to pick from. Built so far: preview mode (section 0) and the icon system (section 2). Everything else is still a plan.
+Status: built and on branch `design/preview-and-plan`, except the items marked Open below. Each line in sections 3 to 5 now starts with Done or Open.
 
 Sources: a pass with the Impeccable detector on the app running against the synthetic fixture (61 sample jobs, 5 techs), screenshots in light and dark, and a read of the current components.
 
@@ -83,43 +83,43 @@ Confirmed by Pilot: in the real export a fireplace or gas log cleaning is logged
 
 ## 3. UI list (from the earlier pass, with new items marked)
 
-- U1 Red only for the primary action and the active tab. Today red also marks the date, Today, and links.
-- U2 Calmer layout: one toolbar row per screen, more space between groups, fewer borders.
-- U3 Consistent controls (shadcn/ui or the same primitives hand-built): buttons, inputs, selects, tabs.
-- U4 Inter or Geist with tabular numbers for times, WO numbers and counts.
-- U5 One icon set across the app. Now covered by section 2.
-- U6 Soft borders, one shadow level, consistent radii.
-- U7 Real empty states with one clear next action.
-- U8 Plain-language errors with a Details toggle for the technical text.
-- U9 Status colors with a legend. Now covered by the Map toolbar chips in section 2.
-- U10 (new) Replace the side-tab card border and the stripes, per section 1.
-- U11 (new) Fix the contrast tokens once: muted text, disabled buttons, the red error text on tinted backgrounds.
-- U12 (new) Cap help text at 70ch.
+- U1 Red only for the primary action and the active tab. Today red also marks the date, Today, and links. **Done.** Red is for the primary action and the active tab; Today, dates and links are neutral.
+- U2 Calmer layout: one toolbar row per screen, more space between groups, fewer borders. **Done for the toolbar row (hidden on Import, Nearby collapsed); the rest is judgment call and left as is.**
+- U3 Consistent controls (shadcn/ui or the same primitives hand-built): buttons, inputs, selects, tabs. **Open.** Controls share class strings per screen, not one primitive set. Low value until a screen needs a new control.
+- U4 Inter or Geist with tabular numbers for times, WO numbers and counts. **Done.** Inter Variable, tabular numbers on times, dates and numeric inputs.
+- U5 One icon set across the app. Now covered by section 2. **Done.** Lucide bodies plus five custom glyphs, one resolver.
+- U6 Soft borders, one shadow level, consistent radii. **Done.** One shadow, 0.5rem radius, flat capacity blocks.
+- U7 Real empty states with one clear next action. **Partly done.** Jobs, Today, Backlog and Sheet have a next action; Planning and Calendar still show a bare message.
+- U8 Plain-language errors with a Details toggle for the technical text. **Done.** Plain sentence first, technical text under Details.
+- U9 Status colors with a legend. Now covered by the Map toolbar chips in section 2. **Done.** Job-type chips double as legend (Calendar) and filter (Map).
+- U10 (new) Replace the side-tab card border and the stripes, per section 1. **Done.** Side-tab border and stripes removed.
+- U11 (new) Fix the contrast tokens once: muted text, disabled buttons, the red error text on tinted backgrounds. **Done for the tokens found.** Remaining detector hits are the header backdrop blur and disabled buttons over a blank test map.
+- U12 (new) Cap help text at 70ch. **Done.**
 
 ## 4. UX list
 
-- X1 Show the date picker and search only on screens where they apply. Import and Sheet do not need the day stepper.
-- X2 Slim the Map toolbar: Find, radius and Nearby behind a More menu.
-- X3 Move the "allow network geocoding" prompt out of the Map and into the first-run screen (X8), asked once. It is a privacy switch, so it stays off until Pilot says yes; it just should not ambush him on the Map.
-- X4 Keyboard shortcuts and a Ctrl+K command palette.
-- X5 Undo toasts after moves and edits.
-- X6 Remember window size and position.
-- X7 A Today view: who is out, what is unmapped, what is flagged, in one glance.
-- X8 First-run screen that walks through import.
-- X9 (new) Preview mode data is today-anchored, so screenshots always open on a populated day.
+- X1 Show the date picker and search only on screens where they apply. Import and Sheet do not need the day stepper. **Done.**
+- X2 Slim the Map toolbar: Find, radius and Nearby behind a More menu. **Done.** Nearby is one button until used.
+- X3 Move the "allow network geocoding" prompt out of the Map and into the first-run screen (X8), asked once. It is a privacy switch, so it stays off until Pilot says yes; it just should not ambush him on the Map. **Done.** The Map no longer asks; first-run screen asks once and the switch stays off until yes.
+- X4 Keyboard shortcuts and a Ctrl+K command palette. **Done.** Ctrl or Cmd+K, Alt+1 to 7, T, [ ], /, ?.
+- X5 Undo toasts after moves and edits. **Done for moves and edits (Ctrl+Z too).**
+- X6 Remember window size and position. **Done.** Saved on close, applied only if the monitor still exists.
+- X7 A Today view: who is out, what is unmapped, what is flagged, in one glance. **Done.** Today tab is the default.
+- X8 First-run screen that walks through import. **Done.**
+- X9 (new) Preview mode data is today-anchored, so screenshots always open on a populated day. **Done.**
 
 ## 5. Function list
 
-- F1 Restore from backup. Backups exist and prune, but there is no way back in the UI.
-- F2 Failed-address review list with a confidence label per match.
-- F3 Re-import diff: what changed since the last ADD export.
-- F4 Print or PDF day sheet per technician.
-- F5 Overbook warnings on the calendar.
-- F6 Saved filters.
-- F7 Bulk edit in the Sheet.
-- F8 Drag from Backlog onto the calendar.
-- F9 CSV export of any view.
-- F10 Job edit history.
+- F1 Restore from backup. Backups exist and prune, but there is no way back in the UI. **Done.** Two-step restore, live copy kept as before-restore, Rust-tested.
+- F2 Failed-address review list with a confidence label per match. **Done.** Pin labels (placed by hand, site pin, Census, Google, street-level only) and a Check these pins list on the Map.
+- F3 Re-import diff: what changed since the last ADD export. **Done.** Import preview lists new, changed (field by field), same, and on the board but missing from the file.
+- F4 Print or PDF day sheet per technician. **Done.** Print day sheets from Today, one page per tech; Windows print dialog can save as PDF.
+- F5 Overbook warnings on the calendar. **Done.** Double-booked problem: overlapping times for one tech, or a job on a PTO or holiday day.
+- F6 Saved filters. **Done for the Sheet (tech, zone, date limit, capacity).** Map type filter is not saved.
+- F7 Bulk edit in the Sheet. **Done.** Pick rows, set tech, date, zone, times or note.
+- F8 Drag from Backlog onto the calendar. **Open, blocked.** Backlog promotion needs job creation, which is switched off (VITE_ENABLE_JOB_CREATE). Decide that first.
+- F9 CSV export of any view. **Done for Jobs, Backlog and Sheet.** CSV cells starting with = or @ are quoted as text.
+- F10 Job edit history. **Done.** Local job_history table (schema 6), last 50 edits per job, shown in the job drawer. Imports are not logged.
 
 ## 6. Suggested order
 

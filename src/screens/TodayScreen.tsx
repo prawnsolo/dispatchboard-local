@@ -61,6 +61,7 @@ export function TodayScreen({
         { selection: { kind: 'mismatch' } as ProblemSelection, count: summary.mismatch },
         { selection: { kind: 'flags' } as ProblemSelection, count: summary.flags },
         { selection: { kind: 'tentative' } as ProblemSelection, count: summary.tentative },
+        { selection: { kind: 'overlap' } as ProblemSelection, count: summary.overlap },
         { selection: { kind: 'boots' } as ProblemSelection, count: summary.boots },
         ...summary.overCapacity.map((row) => ({ selection: { kind: 'over_capacity', tech: row.tech } as ProblemSelection, count: row.jobs })),
       ].filter((item) => item.count > 0)

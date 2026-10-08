@@ -10,6 +10,7 @@ import { jobHasMappedPin } from './geocode.ts'
 import type { JobDurationInput } from './jobDurations.ts'
 import { bootsCountForDate, bootsFlagsForJobs, type BootsJob } from './boots.ts'
 import { techDayLoads } from './techLoad.ts'
+import { overlappingJobIds, type OverlapJob } from './overlap.ts'
 import { calendarKind, isCapacityBlock, techKey } from './schedule.ts'
 
 export type ProblemJob = JobDurationInput & {
@@ -25,7 +26,7 @@ export type ProblemJob = JobDurationInput & {
   checklist_open?: number | null
 }
 
-export type ProblemKind = 'unmapped' | 'mismatch' | 'flags' | 'tentative' | 'over_capacity' | 'boots'
+export type ProblemKind = 'unmapped' | 'mismatch' | 'flags' | 'tentative' | 'over_capacity' | 'boots' | 'overlap'
 
 export type ProblemSelection = { kind: Exclude<ProblemKind, 'over_capacity'> } | { kind: 'over_capacity'; tech: string }
 
@@ -49,6 +50,8 @@ export type ProblemSummary = {
   tentative: number
   overCapacity: OverCapacityTech[]
   boots: number
+  /** Jobs double-booked for one tech, or booked on their day off. */
+  overlap: number
 }
 
 
@@ -96,11 +99,12 @@ export function summarizeProblems(jobs: readonly ProblemJob[], date: string): Pr
     tentative: day.filter(isTentative).length,
     overCapacity: overCapacityTechs(day, date),
     boots: bootsCountForDate(bootsFlags, date),
+    overlap: overlappingJobIds(day as unknown as OverlapJob[], date).size,
   }
 }
 
 export function problemTotal(summary: ProblemSummary): number {
-  return summary.unmapped + summary.mismatch + summary.flags + summary.tentative + summary.overCapacity.length + summary.boots
+  return summary.unmapped + summary.mismatch + summary.flags + summary.tentative + summary.overCapacity.length + summary.boots + summary.overlap
 }
 
 /** Predicate for the clicked strip item. Limited to the strip's date. */
@@ -122,6 +126,10 @@ export function problemPredicate(
     case 'over_capacity': {
       const key = techKey(selection.tech)
       return (job) => onDay(job) && techKey(job.technician_name) === key
+    }
+    case 'overlap': {
+      const ids = overlappingJobIds(allJobs as unknown as OverlapJob[], date)
+      return (job) => onDay(job) && ids.has(job.id)
     }
     case 'boots': {
       const flags = bootsFlagsForJobs(allJobs as unknown as BootsJob[])
@@ -150,5 +158,7 @@ export function selectionLabel(selection: ProblemSelection): string {
       return `Over capacity · ${selection.tech}`
     case 'boots':
       return 'Boots'
+    case 'overlap':
+      return 'Double-booked'
   }
 }

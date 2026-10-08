@@ -39,6 +39,7 @@ export function ProblemsStrip({
     { key: 'mismatch', selection: { kind: 'mismatch' }, tone: 'rose', count: summary.mismatch, label: 'Mismatch', mark: '≠', title: 'Call reason / note mismatch' },
     { key: 'flags', selection: { kind: 'flags' }, tone: 'amber', count: summary.flags, label: 'Open flags', mark: '⚑', title: 'Required checklist item unchecked' },
     { key: 'tentative', selection: { kind: 'tentative' }, tone: 'orange', count: summary.tentative, label: 'Tentative', title: 'No work order yet' },
+    { key: 'overlap', selection: { kind: 'overlap' }, tone: 'rose', count: summary.overlap, label: 'Double-booked', title: 'Overlapping times for one tech, or a job on their day off' },
     { key: 'boots', selection: { kind: 'boots' }, tone: 'amber', count: summary.boots, label: 'Boots', title: 'Inside job after UG/piping the same day' },
   ]
   const items: Item[] = [

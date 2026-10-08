@@ -17,6 +17,7 @@ import {
 import type { JobRow } from '../lib/store.ts'
 import { ErrorNote } from '../components/ErrorNote.tsx'
 import { downloadText } from '../lib/csv.ts'
+import { readSheetViews, removeView, upsertView, writeSheetViews, type SheetView } from '../lib/saved-views.ts'
 
 const cellInput =
   'h-8 w-full min-w-0 border-0 bg-transparent px-1.5 text-cell text-slate-900 outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 disabled:text-slate-500'
@@ -120,6 +121,9 @@ export function SheetScreen({
   const [includeCapacity, setIncludeCapacity] = useState(false)
   const [technician, setTechnician] = useState('')
   const [zone, setZone] = useState('')
+  const [views, setViews] = useState<SheetView[]>(() => readSheetViews())
+  const [viewName, setViewName] = useState<string | null>(null)
+  const [activeView, setActiveView] = useState('')
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [sort, setSort] = useState<SheetSort | null>(null)
   const [loading, setLoading] = useState(true)
@@ -234,6 +238,88 @@ export function SheetScreen({
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
+          View
+          <select
+            value={activeView}
+            data-testid="sheet-views"
+            onChange={(event) => {
+              const name = event.target.value
+              setActiveView(name)
+              const v = views.find((x) => x.name === name)
+              if (!v) return
+              setLimitToDate(v.limitToDate)
+              setIncludeCapacity(v.includeCapacity)
+              setTechnician(v.technician)
+              setZone(v.zone)
+            }}
+            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm font-normal text-slate-900"
+          >
+            <option value="">Saved views</option>
+            {views.map((v) => (
+              <option key={v.name} value={v.name}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {viewName == null ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setViewName(activeView)}
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              Save view
+            </button>
+            {activeView ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = removeView(views, activeView)
+                  setViews(next)
+                  writeSheetViews(next)
+                  setActiveView('')
+                }}
+                className="px-1.5 py-1 text-sm font-medium text-slate-600 underline underline-offset-2 hover:text-slate-900"
+              >
+                Delete view
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <form
+            className="flex items-center gap-1"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const name = viewName.trim()
+              if (!name) return
+              const next = upsertView(views, { name, limitToDate, includeCapacity, technician, zone })
+              setViews(next)
+              writeSheetViews(next)
+              setActiveView(name)
+              setViewName(null)
+            }}
+          >
+            <input
+              autoFocus
+              value={viewName}
+              maxLength={40}
+              placeholder="Name this view"
+              onChange={(event) => setViewName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setViewName(null)
+              }}
+              className="h-8 w-36 rounded border border-slate-300 bg-white px-2 text-sm text-slate-900"
+            />
+            <button type="submit" disabled={!viewName.trim()} className="rounded-lg bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500">
+              Save
+            </button>
+            <button type="button" onClick={() => setViewName(null)} className="px-1.5 py-1 text-sm font-medium text-slate-600 hover:text-slate-900">
+              Cancel
+            </button>
+          </form>
+        )}
         <button
           type="button"
           disabled={rows.length === 0}

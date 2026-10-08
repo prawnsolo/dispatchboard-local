@@ -1,0 +1,19 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Local DispatchBoard window. SQLite on this PC only.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "sql:default",
+    "sql:allow-load",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-close",
+    "allow-db-path",
+    "allow-google-api-key-get",
+    "allow-google-api-key-set",
+    "allow-backup-target",
+    "allow-geo-http-get"
+  ]
+}

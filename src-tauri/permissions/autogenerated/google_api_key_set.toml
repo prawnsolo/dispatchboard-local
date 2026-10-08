@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-google-api-key-set"
+description = "Enables the google_api_key_set command without any pre-configured scope."
+commands.allow = ["google_api_key_set"]
+
+[[permission]]
+identifier = "deny-google-api-key-set"
+description = "Denies the google_api_key_set command without any pre-configured scope."
+commands.deny = ["google_api_key_set"]

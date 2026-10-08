@@ -1,0 +1,26 @@
+[package]
+name = "local-dispatchboard"
+version = "0.3.0"
+description = "DispatchBoard local desktop — SQLite on this PC"
+edition = "2021"
+
+[lib]
+name = "local_dispatchboard_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+# Geocoder GETs (Census has no CORS). native-tls = SChannel on Windows, no C toolchain extras.
+reqwest = { version = "0.13", default-features = false, features = ["native-tls"] }
+# Google key lives in Windows Credential Manager, not on disk. Other targets get the
+# in-memory mock store, which is enough for dev builds and CI.
+keyring = { version = "3", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+keyring = { version = "3", default-features = false, features = ["windows-native"] }

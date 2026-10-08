@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks commits that carry real customer data. Enable once per clone:
+#   git config core.hooksPath .githooks
+exec node scripts/check-fixtures-synthetic.mjs

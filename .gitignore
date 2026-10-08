@@ -1,0 +1,36 @@
+# deps / build
+node_modules/
+dist/
+dist-ssr/
+*.local
+*.tsbuildinfo
+src-tauri/target/
+src-tauri/gen/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs / OS / editor
+*.log
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# REAL CUSTOMER DATA NEVER GOES IN GIT.
+# Pegasus/ADD exports hold names, home addresses, account and WO numbers.
+# Keep them outside the repo, or inside one of these ignored folders.
+/private/
+/exports/
+fixtures/real/
+*.xls
+*.xlsx
+*.xlsm
+*.sqlite
+*.sqlite3
+*.db
+*.b64
+*.b64.part*

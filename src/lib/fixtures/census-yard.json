@@ -1,0 +1,22 @@
+{
+  "result": {
+    "input": {
+      "address": { "address": "1600 Beulah Salisbury Dr, Fredericksburg VA" },
+      "benchmark": { "benchmarkName": "Public_AR_Current" }
+    },
+    "addressMatches": [
+      {
+        "matchedAddress": "1600 BEULAH SALISBURY DR, FREDERICKSBURG, VA, 22407",
+        "coordinates": { "x": -77.45294, "y": 38.28448 },
+        "addressComponents": {
+          "fromAddress": "1600",
+          "streetName": "BEULAH SALISBURY",
+          "suffixType": "DR",
+          "city": "FREDERICKSBURG",
+          "state": "VA",
+          "zip": "22407"
+        }
+      }
+    ]
+  }
+}

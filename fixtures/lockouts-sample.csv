@@ -1,0 +1,3 @@
+Customer #,Customer Name,Address,Zone,Notes,Priority
+DEMO-LOCK,DEMO LOCKOUT,DEMO/174 SAMPLE CREEK WAY//STAFFORD VA 22556,FP-748,Phase 5 sample — keeps the overlay seed open,high
+44119,SAMPLE CREDIT LIST,102 PLANTATION LANE STAFFORD VA 22556,FP-751,Dry-run / demo only — not a real customer,high

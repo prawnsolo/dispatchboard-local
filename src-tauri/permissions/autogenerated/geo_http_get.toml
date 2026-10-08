@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-geo-http-get"
+description = "Enables the geo_http_get command without any pre-configured scope."
+commands.allow = ["geo_http_get"]
+
+[[permission]]
+identifier = "deny-geo-http-get"
+description = "Denies the geo_http_get command without any pre-configured scope."
+commands.deny = ["geo_http_get"]

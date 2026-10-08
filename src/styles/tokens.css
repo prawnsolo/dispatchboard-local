@@ -1,0 +1,242 @@
+/*
+ * Shared DispatchBoard design tokens.
+ * Local (`src/index.css`) imports
+ * this file. Brand red + charcoal come from tigerfuel.com. The neutral scale
+ * replaces Tailwind's blue-tinted slate so every `slate-*` class picks up the
+ * brand neutrals. Dark theme remaps the same names, so components do not need
+ * per-class `dark:` variants.
+ */
+@theme {
+  --color-brand-50: #fff1f0;
+  --color-brand-100: #fee2e0;
+  --color-brand-200: #fcc2be;
+  --color-brand-300: #f9958d;
+  --color-brand-400: #f56b60;
+  --color-brand-500: #ef3e33;
+  --color-brand-600: #d63a2f;
+  --color-brand-700: #b52d24;
+  --color-brand-800: #8f241d;
+  --color-brand-900: #6b1b16;
+
+  --color-slate-50: #f7f7f8;
+  --color-slate-100: #efeff1;
+  --color-slate-200: #e2e2e6;
+  --color-slate-300: #cfcfd5;
+  --color-slate-400: #6a6a74;
+  --color-slate-500: #58585f;
+  --color-slate-600: #494950;
+  --color-slate-700: #3d3e43;
+  --color-slate-800: #2b2c30;
+  --color-slate-900: #1b1c1f;
+  --color-slate-950: #0f1012;
+
+  /* Desktop chrome density: 12px page inset, 12px meta (DESIGN.md floor), 13px cells. */
+  --spacing-chrome: 0.75rem;
+  --text-meta: 0.75rem;
+  --text-meta--line-height: 1.35;
+  --text-cell: 0.8125rem;
+  --text-cell--line-height: 1.35;
+}
+
+:root {
+  color-scheme: light;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --app-bg: #f4f4f5;
+  --surface: #ffffff;
+  --chrome: #3d3e43;
+  --text: #1b1c1f;
+  --capacity-a: #f7f7f8;
+  --capacity-b: #e2e2e6;
+  --db-sheet-peek: 40dvh;
+  --db-sheet-expanded: 92dvh;
+  --db-sheet-radius: 0.75rem;
+  --db-touch: 2.75rem;
+  --db-status-tentative: #d97706;
+  --db-status-scheduled: #0284c7;
+  --db-status-locked: #3d3e43;
+}
+
+/* Dark theme: same token names, inverted neutrals, deep tinted status colors. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --app-bg: #0e0e10;
+  --surface: #17171b;
+  --chrome: #2a2a30;
+  --text: #f2f2f5;
+  --capacity-a: #1b1b20;
+  --capacity-b: #26262c;
+
+  --color-slate-50: #1b1b20;
+  --color-slate-100: #232329;
+  --color-slate-200: #2e2e35;
+  --color-slate-300: #42424b;
+  --color-slate-400: #85858f;
+  --color-slate-500: #9a9aa4;
+  --color-slate-600: #b3b3bc;
+  --color-slate-700: #cdcdd4;
+  --color-slate-800: #e4e4e9;
+  --color-slate-900: #f2f2f5;
+  --color-slate-950: #fafafb;
+
+  --color-amber-50: #2a2312;
+  --color-amber-100: #3a2f14;
+  --color-amber-200: #4d3c16;
+  --color-amber-700: #e6b04a;
+  --color-amber-800: #f0c470;
+  --color-amber-900: #f7d999;
+  --color-amber-950: #fbe9c2;
+
+  --color-sky-50: #0f2230;
+  --color-sky-100: #142e42;
+  --color-sky-200: #1b3f5a;
+  --color-sky-300: #2b6a92;
+  --color-sky-700: #7cc4ee;
+  --color-sky-950: #cfeafc;
+
+  --color-rose-50: #2d1519;
+  --color-rose-100: #3d1a20;
+  --color-rose-200: #55232b;
+  --color-rose-300: #7a3340;
+  --color-rose-700: #fb8fa3;
+  --color-rose-800: #fda4b5;
+  --color-rose-900: #fecdd6;
+
+  --color-emerald-50: #0f2a1f;
+  --color-emerald-100: #123527;
+  --color-emerald-200: #17472f;
+  --color-emerald-700: #5fd6a3;
+  --color-emerald-800: #86e5bd;
+  --color-emerald-950: #d1fae5;
+
+  --db-status-locked: #cbd5e1;
+}
+
+:root[data-theme='dark'] .bg-white {
+  background-color: var(--surface);
+}
+
+:root[data-theme='dark'] .bg-white\/95 {
+  background-color: color-mix(in srgb, var(--surface) 95%, transparent);
+}
+
+:root[data-theme='dark'] .bg-white\/90 {
+  background-color: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+
+:root[data-theme='dark'] .focus\:bg-white:focus {
+  background-color: var(--surface);
+}
+
+/* Modal scrims stay dark in both themes (slate-900 is light in dark mode). */
+:root[data-theme='dark'] .bg-slate-900\/40 {
+  background-color: rgb(0 0 0 / 0.6);
+}
+
+/* `ring-offset` gaps should match the surface, not white. */
+:root[data-theme='dark'] * {
+  --tw-ring-offset-color: var(--surface);
+}
+
+@utility bg-app {
+  background-color: var(--app-bg);
+}
+
+@utility bg-chrome {
+  background-color: var(--chrome);
+}
+
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--color-brand-600);
+}
+
+/* Softer fields everywhere without touching every class list. */
+input:not([type='checkbox']):not([type='radio']):not([type='range']),
+select,
+textarea {
+  border-radius: 0.5rem;
+}
+
+.maplibregl-ctrl-group {
+  border-radius: 0.5rem;
+}
+
+/* One consistent, brand-colored keyboard focus ring. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.db-capacity {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--capacity-a),
+    var(--capacity-a) 5px,
+    var(--capacity-b) 5px,
+    var(--capacity-b) 10px
+  );
+}
+
+/* Map controls follow the theme. */
+:root[data-theme='dark'] .maplibregl-ctrl-group {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-group button + button {
+  border-top-color: rgb(255 255 255 / 0.12);
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl button .maplibregl-ctrl-icon,
+:root[data-theme='dark'] .maplibregl-ctrl-attrib-button {
+  filter: invert(1);
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-attrib,
+:root[data-theme='dark'] .maplibregl-ctrl-scale {
+  background: rgb(14 14 16 / 0.7);
+  color: #cdcdd4;
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-attrib a {
+  color: #cdcdd4;
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-scale {
+  border-color: #cdcdd4;
+}
+
+.db-yard-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.db-yard-marker-icon {
+  display: flex;
+  width: 1.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #f8fafc;
+  border-radius: 2px;
+  background: var(--chrome);
+  color: #f8fafc;
+  font-size: 0.85rem;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.35);
+}
+
+.db-yard-marker-label {
+  margin-top: 0.15rem;
+  padding: 0 0.3rem;
+  border-radius: 0.2rem;
+  background: var(--chrome);
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+}

@@ -695,3 +695,11 @@ if (previousGoogleEnv === undefined) delete process.env.GOOGLE_MAPS_API_KEY
 else process.env.GOOGLE_MAPS_API_KEY = previousGoogleEnv
 
 console.log('geocode cache ok: census chain, site pin, opt-in off, Google paste-key, manual pin, migration')
+
+{
+  const { pinConfidence } = await import('./geocode.ts')
+  assert.equal(pinConfidence('nominatim').level, 'check')
+  assert.equal(pinConfidence('census').level, 'good')
+  assert.equal(pinConfidence('manual').level, 'high')
+  assert.equal(pinConfidence(null).level, 'none')
+}

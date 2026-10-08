@@ -777,6 +777,26 @@ export function jobHasMappedPin(job: {
   return src === 'census' || src === 'site_pin' || src === 'manual' || src === 'google' || src === 'nominatim'
 }
 
+export type PinConfidence = { level: 'high' | 'good' | 'check' | 'none'; label: string }
+
+/** Plain-words trust level for a stored pin, shown on the Map and in the review list. */
+export function pinConfidence(source: string | null | undefined): PinConfidence {
+  switch (source) {
+    case 'manual':
+      return { level: 'high', label: 'Placed by hand' }
+    case 'site_pin':
+      return { level: 'high', label: 'Saved site pin' }
+    case 'census':
+      return { level: 'good', label: 'Census address match' }
+    case 'google':
+      return { level: 'good', label: 'Google match' }
+    case 'nominatim':
+      return { level: 'check', label: 'Street-level only (OpenStreetMap)' }
+    default:
+      return { level: 'none', label: 'No pin' }
+  }
+}
+
 export type GeocodePersistJob = {
   id: number
   address_street: string | null

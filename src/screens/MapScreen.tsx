@@ -15,7 +15,7 @@ import { jobPinColor, mapScheduleSignal, mapScheduleStroke } from '../lib/colors
 import { JobTypeChips, countJobTypes, jobTypeKey } from '../components/JobTypeChips.tsx'
 import { glyphToneFor, jobIcon } from '../lib/job-icons.ts'
 import { glyphId } from '../lib/pin-glyphs.ts'
-import { asCoord, jobHasMappedPin } from '../lib/geocode.ts'
+import { asCoord, jobHasMappedPin, pinConfidence } from '../lib/geocode.ts'
 import { readGoogleMapsApiKey, useHasGoogleMapsApiKey } from '../lib/google-key.ts'
 import { ALLOW_NETWORK_GEOCODING_CONFIRM, isMapTechVisible, useAllowNetworkGeocoding, useMapHiddenTechs } from '../lib/prefs.ts'
 import { BOOTS_CHIP_LABEL, bootsFlagsForJobs } from '../lib/boots.ts'
@@ -161,6 +161,8 @@ export function MapScreen({
     [visible, hiddenTypes],
   )
   const unmapped = useMemo(() => shown.filter((job) => !jobHasMappedPin(job)), [shown])
+  // Pins from the loosest source (street level only). Worth a look before sending a tech.
+  const toCheck = useMemo(() => shown.filter((job) => jobHasMappedPin(job) && pinConfidence(job.geocode_source).level === 'check'), [shown])
   const radiusMiles = minutesToMiles(radiusMinutes)
   const distances = useMemo(
     () => (center ? nearbyJobDistances(visible, center, radiusMiles) : null),
@@ -541,6 +543,36 @@ export function MapScreen({
               </ul>
               </>
             )}
+            {toCheck.length ? (
+              <div data-testid="pins-to-check">
+                <p className="border-y border-slate-200 px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Check these pins ({toCheck.length})
+                </p>
+                <ul>
+                  {toCheck.map((job) => (
+                    <li key={job.id} className="flex items-center justify-between gap-2 border-b border-slate-100 py-0.5 pl-2 pr-1 last:border-b-0">
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-medium text-slate-900">{job.customer_name}</p>
+                        <p className="truncate text-xs text-slate-500">
+                          {pinConfidence(job.geocode_source).label} · {addressLine(job)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFixId(job.id)
+                          setDropped(null)
+                          setPinDrop(false)
+                        }}
+                        className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded px-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
+                      >
+                        Review
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
           {selected ? (
             <div className="rounded-md border border-slate-200 bg-white/95 p-2 text-xs shadow-sm">
@@ -558,7 +590,7 @@ export function MapScreen({
               ) : null}
               <p className="mt-0.5 text-slate-600">{addressLine(selected)}</p>
               <p className="mt-0.5 text-slate-500">
-                {selected.geocode_source ?? 'none'}
+                {pinConfidence(selected.geocode_source).label}
                 {selected.lat != null && selected.lng != null ? ` · ${selected.lat}, ${selected.lng}` : ''}
               </p>
               {!jobHasMappedPin(selected) ? (

@@ -1,6 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { geocodeLocalJobs, saveLocalJobAddress, saveLocalManualPin } from '../lib/db.ts'
-import { parsePin } from '../lib/geocode.ts'
+import { jobHasMappedPin, parsePin, pinConfidence } from '../lib/geocode.ts'
 import { GOOGLE_KEY_EVENT, readGoogleMapsApiKey } from '../lib/google-key.ts'
 import type { JobRow } from '../lib/store.ts'
 import { ErrorNote } from './ErrorNote.tsx'
@@ -130,9 +130,11 @@ export function UnmappedFix({
         className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-lg bg-white p-5 shadow-card"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Unmapped</p>
+        <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          {jobHasMappedPin(job) ? `Review pin · ${pinConfidence(job.geocode_source).label}` : 'Unmapped'}
+        </p>
         <h2 id={titleId} className="text-lg font-semibold">
-          Fix {job.customer_name}
+          {jobHasMappedPin(job) ? 'Review' : 'Fix'} {job.customer_name}
         </h2>
         <p className="mt-1 text-sm text-ink-body">
           {job.wo_number ? `WO ${job.wo_number}` : 'No work order'}

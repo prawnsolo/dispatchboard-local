@@ -62,7 +62,7 @@ Rule:
 2. A job gets the gas log icon as its main icon only when the activity is a maintenance or cleaning call (PREV MAINT, anything with CLEAN) and either the location definition lists FIREPLACE or GAS LOGS, or the call note mentions fireplace or gas logs.
 3. Every other job that has FIREPLACE or GAS LOGS at the location gets a small secondary appliance glyph in the Jobs list, the Sheet and the pin popup, never on the pin itself.
 
-The sample data has no fireplace cleaning calls, so I cannot verify rule 2 against the real call reason name. That is the open question for Pilot.
+Confirmed by Pilot: in the real export a fireplace or gas log cleaning is logged as PREV MAINT, with the fireplace noted in the location or the call note. Rule 2 matches that. The sample data has no such call, so the preview needs two added sample rows to show it (synthetic, PREV MAINT with GAS LOGS at the location).
 
 ### 2.3 Where icons appear
 
@@ -129,6 +129,6 @@ The sample data has no fireplace cleaning calls, so I cannot verify rule 2 again
 4. F1. It protects the data the rest of this depends on.
 5. Everything else by Pilot's pick.
 
-## 7. Open question
+## 7. Open questions
 
-What is the call reason called in ADD when a tech cleans a fireplace or gas logs? The icon rule in 2.2 needs the real string, or confirmation that it is logged as PREV MAINT with the fireplace noted in the location or the call note.
+None blocking. Next decision is which batch to build first (section 6).

@@ -1,3 +1,5 @@
+import { downloadText } from '../lib/csv.ts'
+import { backlogCsv } from '../lib/exports.ts'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
   BACKLOG_PRIORITIES,
@@ -173,8 +175,16 @@ export function BacklogScreen({
           </label>
           <button
             type="button"
+            disabled={visible.length === 0}
+            onClick={() => downloadText('dispatchboard-backlog.csv', backlogCsv(visible))}
+            className="ml-auto rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50 disabled:text-slate-400"
+          >
+            Export CSV
+          </button>
+          <button
+            type="button"
             onClick={() => setDraft(blankBacklogDraft())}
-            className="ml-auto rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
+            className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
           >
             New item
           </button>

@@ -7,6 +7,8 @@ import { formatDate, formatTimeRange } from '../lib/format.ts'
 import { blankJobDraft, draftFromJob, type DateCount, type JobDraft, type JobRow } from '../lib/store.ts'
 import { ENABLE_JOB_CREATE } from '../lib/features.ts'
 import { ErrorNote } from '../components/ErrorNote.tsx'
+import { downloadText } from '../lib/csv.ts'
+import { jobsCsv } from '../lib/exports.ts'
 
 export function JobsScreen({
   revision,
@@ -103,12 +105,21 @@ export function JobsScreen({
           {allDates || query.trim() ? ' · all dates' : ` · ${formatDate(date)}`}
           {query.trim() && !allDates ? ' · search spans all dates' : ''}
         </p>
+        <button
+          type="button"
+          disabled={shown.length === 0}
+          onClick={() => downloadText('dispatchboard-jobs.csv', jobsCsv(shown))}
+          title="Save the rows on screen as a CSV file"
+          className="ml-auto inline-flex h-8 items-center rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:text-slate-400"
+        >
+          Export CSV
+        </button>
         {ENABLE_JOB_CREATE ? (
           <button
             type="button"
             data-testid="new-job-button"
             onClick={() => openDraft(blankJobDraft(), 'new')}
-            className="ml-auto rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
           >
             New job
           </button>

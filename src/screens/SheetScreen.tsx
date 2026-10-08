@@ -16,18 +16,13 @@ import {
 } from '../lib/sheet.ts'
 import type { JobRow } from '../lib/store.ts'
 import { ErrorNote } from '../components/ErrorNote.tsx'
+import { downloadText } from '../lib/csv.ts'
 
 const cellInput =
   'h-8 w-full min-w-0 border-0 bg-transparent px-1.5 text-cell text-slate-900 outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 disabled:text-slate-500'
 
 function downloadCsv(csv: string) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = 'dispatchboard-local-sheet.csv'
-  anchor.click()
-  URL.revokeObjectURL(url)
+  downloadText('dispatchboard-local-sheet.csv', csv)
 }
 
 function SheetCell({

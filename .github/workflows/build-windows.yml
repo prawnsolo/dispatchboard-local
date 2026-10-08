@@ -23,8 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Tests
-        run: npm run test:local
+      # Tests run on Linux in ci.yml. The test script uses POSIX env syntax, so it is not repeated here.
       - name: Build installer
         run: npm run desktop:build
       - name: Collect installer

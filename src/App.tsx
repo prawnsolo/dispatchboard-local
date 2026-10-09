@@ -175,7 +175,7 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    if (!location.hash) location.replace('#/jobs')
+    if (!location.hash) location.replace('#/today')
     const onHash = () => setTab(tabFromHash())
     window.addEventListener('hashchange', onHash)
     return () => window.removeEventListener('hashchange', onHash)

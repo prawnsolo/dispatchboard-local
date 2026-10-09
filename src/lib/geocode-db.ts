@@ -8,6 +8,7 @@ import {
   applyGeocodeCounts,
   geocodeAndPersistRows,
   geocodeWithGoogle,
+  jobHasMappedPin,
   GoogleGeocoderError,
   memoryCache,
   siteKey,
@@ -34,6 +35,10 @@ export type LocalGeocodeSummary = {
   census_calls: number
   google_calls: number
   nominatim_calls: number
+  /** Google answered with an error (bad key, quota, offline), not a plain "no match". */
+  google_errors: number
+  /** Jobs with a street address that still have no pin after this run. */
+  unmapped_ids: number[]
   /** True when Census was allowed to run for this batch. */
   network: boolean
 }
@@ -58,6 +63,8 @@ export async function geocodeStoredJobs(
     google?: GoogleLookup
     /** Last fallback after Google. Ignored when network geocoding is off. */
     nominatim?: NominatimLookup
+    /** Try Google again for addresses that already missed (the "Try again with Google" button). */
+    retryGoogle?: boolean
   } = { allowNetwork: false },
 ): Promise<LocalGeocodeSummary> {
   const unique = [...new Set(ids)]
@@ -69,6 +76,8 @@ export async function geocodeStoredJobs(
       census_calls: 0,
       google_calls: 0,
       nominatim_calls: 0,
+      google_errors: 0,
+      unmapped_ids: [],
       network: opts.allowNetwork,
     }
   }
@@ -104,6 +113,7 @@ export async function geocodeStoredJobs(
     census: opts.census,
     google,
     nominatim: opts.allowNetwork ? opts.nominatim : undefined,
+    retryGoogle: opts.allowNetwork ? opts.retryGoogle : undefined,
   })
 
   try {
@@ -131,6 +141,8 @@ export async function geocodeStoredJobs(
     census_calls: batch.census_calls,
     google_calls: batch.google_calls,
     nominatim_calls: batch.nominatim_calls,
+    google_errors: batch.google_errors,
+    unmapped_ids: rows.filter((job) => !job.is_capacity_block && !jobHasMappedPin(job) && Boolean(job.address_street?.trim())).map((job) => job.id),
     network: opts.allowNetwork,
   }
 }

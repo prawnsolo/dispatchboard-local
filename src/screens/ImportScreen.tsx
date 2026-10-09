@@ -6,6 +6,7 @@ import { readLastApply, writeLastApply, type LastApplyRecord } from '../lib/last
 import { ALLOW_NETWORK_GEOCODING_CONFIRM, useAllowNetworkGeocoding } from '../lib/prefs.ts'
 import type { LocalGeocodeSummary } from '../lib/geocode-db.ts'
 import type { ApplyStats } from '../lib/store.ts'
+import { GoogleFixDialog } from '../components/GoogleFixDialog.tsx'
 import { ErrorNote } from '../components/ErrorNote.tsx'
 import { describeChange, type ImportDiff } from '../lib/import-diff.ts'
 
@@ -143,6 +144,7 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
   const [geocodeAfter, setGeocodeAfter] = useState(true)
   const [geoSummary, setGeoSummary] = useState<LocalGeocodeSummary | null>(null)
   const [geoSkipped, setGeoSkipped] = useState(false)
+  const [fix, setFix] = useState<{ ids: number[]; googleErrors: number } | null>(null)
 
   async function refreshMeta() {
     try {
@@ -217,6 +219,7 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
           const summary = await geocodeLocalJobs(result.writtenIds, { allowNetwork: true })
           setGeoSummary(summary)
           setGeoSkipped(false)
+          if (summary.unmapped_ids.length > 0) setFix({ ids: summary.unmapped_ids, googleErrors: summary.google_errors })
         } catch (error) {
           setGeoSkipped(true)
           setApplyError(
@@ -345,6 +348,16 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
             <>
               <ApplyCounts record={{ ...lastApply, ...stats }} />
               <GeocodeCounts summary={geoSummary} skipped={geoSkipped} />
+              {geoSummary && geoSummary.unmapped_ids.length > 0 && !fix ? (
+                <button
+                  type="button"
+                  data-testid="google-fix-reopen"
+                  onClick={() => setFix({ ids: geoSummary.unmapped_ids, googleErrors: geoSummary.google_errors })}
+                  className="mt-2 text-sm font-medium text-ink underline underline-offset-2"
+                >
+                  {geoSummary.unmapped_ids.length} {geoSummary.unmapped_ids.length === 1 ? 'address' : 'addresses'} not found. Use Google to fix
+                </button>
+              ) : null}
               <p className="mt-2 text-xs text-ink-label">
                 New rows were inserted. Updated rows matched a work order or capacity key and were overwritten.
                 Unchanged rows matched and were left as stored. A mismatch rule match sets ≠ on the job. It does not
@@ -427,6 +440,19 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
           Wipe local database
         </button>
       </section>
+      {fix ? (
+        <GoogleFixDialog
+          ids={fix.ids}
+          googleErrors={fix.googleErrors}
+          alreadyTried
+          onClose={() => setFix(null)}
+          onChanged={(left) => {
+            setGeoSummary((prev) => (prev ? { ...prev, unmapped_ids: left } : prev))
+            onApplied()
+            void refreshMeta()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

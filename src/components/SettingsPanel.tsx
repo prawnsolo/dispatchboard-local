@@ -1,4 +1,5 @@
 import { ErrorNote } from './ErrorNote.tsx'
+import { GoogleFixDialog } from './GoogleFixDialog.tsx'
 import { RestorePanel } from './RestorePanel.tsx'
 import { useEffect, useId, useState } from 'react'
 import {
@@ -6,6 +7,7 @@ import {
   clearScheduledLocalJobs,
   databasePath,
   queryCounts,
+  queryUnmappedFixableIds,
   WIPE_LOCAL_CONFIRM,
   backupLocalDatabase,
   wipeLocalDatabase,
@@ -68,7 +70,7 @@ function NetworkGeocodeSetting() {
   )
 }
 
-function GoogleKeySetting() {
+function GoogleKeySetting({ onChanged }: { onChanged: () => void }) {
   const [hasKey, setHasKey] = useState(false)
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -80,6 +82,8 @@ function GoogleKeySetting() {
   const [note, setNote] = useState<string | null>(null)
   const [testNote, setTestNote] = useState<string | null>(null)
   const [testOk, setTestOk] = useState<boolean | null>(null)
+  const [fixIds, setFixIds] = useState<number[] | null>(null)
+  const [fixNote, setFixNote] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -110,7 +114,7 @@ function GoogleKeySetting() {
     }
   }, [])
 
-  async function onSave() {
+  async function onSave(): Promise<boolean> {
     setBusy(true)
     setError(null)
     setNote(null)
@@ -124,10 +128,27 @@ function GoogleKeySetting() {
       setDraft('')
       setReveal(false)
       setNote('Saved.')
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
+      return false
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function onFix() {
+    setFixNote(null)
+    try {
+      if (draft.trim() !== '' && !(await onSave())) return
+      const ids = await queryUnmappedFixableIds()
+      if (ids.length === 0) {
+        setFixNote('Every address with a street already has a pin.')
+        return
+      }
+      setFixIds(ids)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
     }
   }
 
@@ -226,6 +247,15 @@ function GoogleKeySetting() {
         >
           {reveal ? 'Hide' : 'Show'}
         </button>
+        <button
+          type="button"
+          data-testid="google-api-key-fix"
+          disabled={unavailable || busy}
+          onClick={() => void onFix()}
+          className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-body hover:border-ink hover:text-ink disabled:opacity-50"
+        >
+          Use Google to fix addresses not found
+        </button>
         {hasKey ? (
           <button
             type="button"
@@ -245,6 +275,8 @@ function GoogleKeySetting() {
       ) : null}
       {error && !unavailable ? <ErrorNote className="mt-2 text-sm" error={error} /> : null}
       {note ? <p className="mt-2 text-sm text-ink-body">{note}</p> : null}
+      {fixNote ? <p className="mt-2 text-sm text-ink-body" data-testid="google-api-key-fix-note">{fixNote}</p> : null}
+      {fixIds ? <GoogleFixDialog ids={fixIds} onClose={() => setFixIds(null)} onChanged={onChanged} /> : null}
       {testNote ? (
         <p
           className={`mt-2 text-sm ${testOk ? 'text-success' : 'text-error'}`}
@@ -557,7 +589,7 @@ export function SettingsPanel({
               <div>
                 <h3 className="text-base font-semibold text-ink">Google Maps API key</h3>
                 <div className="mt-2">
-                  <GoogleKeySetting />
+                  <GoogleKeySetting onChanged={onChanged} />
                 </div>
               </div>
             </>

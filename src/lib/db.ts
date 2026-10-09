@@ -9,6 +9,7 @@ import {
   type DriveTimesOutcome,
 } from './drive-times.ts'
 import { AUTO_GEOCODE_MIN_GAP_MS, localToday, pickAutoGeocodeIds } from './auto-geocode.ts'
+import { unmappedFixableIds } from './google-fix.ts'
 import { geocodeStoredJobs, type LocalGeocodeSummary } from './geocode-db.ts'
 import { geocodeWithNominatim, type CensusLookup } from './geocode.ts'
 import { readGoogleMapsApiKey } from './google-key.ts'
@@ -122,6 +123,11 @@ export async function queryJobs(filter: { date: string; query: string }): Promis
   return listJobs(await open(), filter)
 }
 
+/** Jobs a Google retry could help: street address, no pin. */
+export async function queryUnmappedFixableIds(): Promise<number[]> {
+  return unmappedFixableIds(await listJobs(await open(), { date: '', query: '' }))
+}
+
 export async function queryDates(): Promise<DateCount[]> {
   return listDates(await open())
 }
@@ -224,7 +230,7 @@ export async function clearScheduledLocalJobs(): Promise<number> {
 
 export async function geocodeLocalJobs(
   ids: number[],
-  opts: { allowNetwork: boolean; census?: CensusLookup; delayMs?: number },
+  opts: { allowNetwork: boolean; census?: CensusLookup; delayMs?: number; retryGoogle?: boolean },
 ): Promise<LocalGeocodeSummary> {
   // Key stays in the OS app config. A missing command or an empty file means no Google step.
   // Order: Census → site pin → Google (key saved) → Nominatim. All GETs run in Rust.

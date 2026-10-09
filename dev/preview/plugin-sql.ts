@@ -61,6 +61,13 @@ function boot(): Promise<SqlJs> {
         [p.lat, p.lng, id],
       )
     }
+    // `?unmapped=N` strips the pin from the first N jobs so the "addresses not found" flow can be seen.
+    const unmapped = Number(new URLSearchParams(location.search).get('unmapped') ?? 0)
+    if (unmapped > 0) {
+      for (const { id } of jobs.slice(0, unmapped)) {
+        await adapter.execute("UPDATE jobs SET lat = NULL, lng = NULL, geocode_source = 'none', geocode_address_key = NULL WHERE id = ?", [id])
+      }
+    }
     // The sample export has no fireplace cleaning call. Give the maintenance job one
     // so the gas-log icon shows up in screenshots.
     await adapter.execute(

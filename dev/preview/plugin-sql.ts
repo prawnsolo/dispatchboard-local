@@ -68,6 +68,31 @@ function boot(): Promise<SqlJs> {
         await adapter.execute("UPDATE jobs SET lat = NULL, lng = NULL, geocode_source = 'none', geocode_address_key = NULL WHERE id = ?", [id])
       }
     }
+    // `?backlog=1` adds synthetic open backlog (lock tanks, monitor swaps, tank pickups). Most sit a short
+    // hop from a sample job so "what is near this tech" can be seen; the last two are far away on purpose.
+    if (new URLSearchParams(location.search).get('backlog') === '1') {
+      const pins = await adapter.select<{ lat: number; lng: number }>('SELECT lat, lng FROM jobs WHERE lat IS NOT NULL ORDER BY id LIMIT 6')
+      const kinds: [string, string][] = [
+        ['lockout', 'SAMPLE BACKLOG 01'],
+        ['monitor_swap', 'SAMPLE BACKLOG 02'],
+        ['tank_pickup', 'SAMPLE BACKLOG 03'],
+        ['lockout', 'SAMPLE BACKLOG 04'],
+        ['monitor_swap', 'SAMPLE BACKLOG 05'],
+        ['tank_pickup', 'SAMPLE BACKLOG 06'],
+        ['lockout', 'SAMPLE BACKLOG 07'],
+        ['monitor_swap', 'SAMPLE BACKLOG 08'],
+      ]
+      for (let i = 0; i < kinds.length; i++) {
+        const base = pins[i % pins.length]
+        const far = i >= 6
+        const lat = base.lat + (far ? 0.16 : 0.012 * (i % 2 ? 1 : -1))
+        const lng = base.lng + (far ? -0.14 : 0.014 * (i % 3 ? -1 : 1))
+        await adapter.execute(
+          "INSERT INTO backlog_items (backlog_type, customer_number, customer_name, address_raw, address_street, address_city_state_zip, lat, lng, geocode_source, priority, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'census', 'normal', 'open', 'Sample backlog item, not a real customer.')",
+          [kinds[i][0], `9${i}00`, kinds[i][1], `${100 + i} SAMPLE BACKLOG RD STAFFORD VA 22556`, `${100 + i} SAMPLE BACKLOG RD`, 'STAFFORD VA 22556', lat, lng],
+        )
+      }
+    }
     // The sample export has no fireplace cleaning call. Give the maintenance job one
     // so the gas-log icon shows up in screenshots.
     await adapter.execute(

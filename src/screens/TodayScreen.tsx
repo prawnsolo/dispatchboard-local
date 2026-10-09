@@ -3,6 +3,7 @@ import { ErrorNote } from '../components/ErrorNote.tsx'
 import { PrintDaySheet } from '../components/PrintDaySheet.tsx'
 import { JobIcon } from '../components/JobIcon.tsx'
 import { Icon } from '../components/Icon.tsx'
+import { TankRainWarning, WeatherStrip, useTankRisks } from '../components/Weather.tsx'
 import { JobTypeChips, countJobTypes } from '../components/JobTypeChips.tsx'
 import { queryJobs } from '../lib/db.ts'
 import { displayName, formatDate, formatTimeRange, todayInNewYork } from '../lib/format.ts'
@@ -20,12 +21,16 @@ export function TodayScreen({
   summary,
   onPickProblem,
   onGo,
+  onOpenWeatherSettings,
+  onOpenJob,
 }: {
   revision: number
   date: string
   summary: ProblemSummary | null
   onPickProblem: (selection: ProblemSelection) => void
   onGo: (tab: 'map' | 'calendar' | 'jobs' | 'import') => void
+  onOpenWeatherSettings: () => void
+  onOpenJob: (job: JobRow) => void
 }) {
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -56,6 +61,7 @@ export function TodayScreen({
   const loads = useMemo(() => techDayLoads(jobs), [jobs])
   const crew = useMemo(() => uniqueTechs(work).filter((t) => !out.includes(t)), [work, out])
   const types = useMemo(() => countJobTypes(work), [work])
+  const tankRows = useTankRisks(revision)
   const label = date === todayInNewYork() ? 'Today' : formatDate(date)
 
   const attention: Array<{ selection: ProblemSelection; count: number }> = summary
@@ -96,6 +102,8 @@ export function TodayScreen({
 
         <ErrorNote className="mt-3 text-sm" error={error} />
 
+        <WeatherStrip today={todayInNewYork()} onOpenSettings={onOpenWeatherSettings} />
+
         {loaded && !error && jobs.length === 0 ? (
           <div className="mt-6 rounded-lg border border-slate-200 bg-white p-6">
             <h3 className="text-base font-semibold text-ink">Nothing on the board for this day</h3>
@@ -111,10 +119,11 @@ export function TodayScreen({
           </div>
         ) : null}
 
-        {attention.length ? (
+        {attention.length || tankRows.length ? (
           <section className="mt-5" aria-label="Needs attention">
-            <h3 className="text-sm font-semibold text-slate-700">Needs a look ({summary ? problemTotal(summary) : 0})</h3>
+            <h3 className="text-sm font-semibold text-slate-700">Needs a look ({(summary ? problemTotal(summary) : 0) + tankRows.length})</h3>
             <div className="mt-2 flex flex-wrap gap-2">
+              <TankRainWarning rows={tankRows} onOpenJob={onOpenJob} />
               {attention.map((item) => (
                 <button
                   key={selectionLabel(item.selection)}

@@ -12,7 +12,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 
-export type GeoProvider = 'census' | 'google' | 'nominatim'
+export type GeoProvider = 'census' | 'google' | 'nominatim' | 'nws'
 
 export type GeoHttpResponse = {
   ok: boolean

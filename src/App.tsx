@@ -36,6 +36,7 @@ import { ENABLE_JOB_CREATE } from './lib/features.ts'
 import { CommandPalette, ShortcutHelp, type PaletteCommand } from './components/CommandPalette.tsx'
 import { isEditableTarget, shortcutFor } from './lib/shortcuts.ts'
 import { addDaysYmd } from './lib/schedule.ts'
+import { useWeatherRefresh } from './lib/weather-store.ts'
 
 const TABS = [
   { id: 'today', label: 'Today' },
@@ -67,6 +68,8 @@ export function App() {
   const [tab, setTab] = useState<TabId>(tabFromHash)
   const [revision, setRevision] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsView, setSettingsView] = useState<'home' | 'weather'>('home')
+  useWeatherRefresh()
   const [date, setDate] = useState(() => todayInNewYork())
   const [undoStack, setUndoStack] = useState<ScheduleUndoEntry[]>([])
   const [undoError, setUndoError] = useState<string | null>(null)
@@ -440,6 +443,15 @@ export function App() {
               goTab('jobs')
             }}
             onGo={goTab}
+            onOpenWeatherSettings={() => {
+              setSettingsView('weather')
+              setSettingsOpen(true)
+            }}
+            onOpenJob={(job) => {
+              if (job.schedule_date) setDate(job.schedule_date)
+              setQuery(job.wo_number ?? job.customer_name)
+              goTab('jobs')
+            }}
           />
         </div>
         <div className={tab === 'import' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
@@ -503,7 +515,11 @@ export function App() {
         <SettingsPanel
           planningActive={tab === 'planning'}
           techOptions={mapTechOptions}
-          onClose={() => setSettingsOpen(false)}
+          initialView={settingsView}
+          onClose={() => {
+            setSettingsOpen(false)
+            setSettingsView('home')
+          }}
           onChanged={() => setRevision((n) => n + 1)}
         />
       ) : null}

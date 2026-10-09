@@ -11,6 +11,60 @@ try {
 }
 
 const query = new URLSearchParams(location.search)
+
+const GRID = 'https://api.weather.gov/gridpoints/LWX/84,87'
+
+/**
+ * Scripted National Weather Service answers for screenshots.
+ * `?weather=rain` heavy rain tomorrow and a flood watch, `calm` a dry week, `down` an outage.
+ */
+function nwsReply(url: string): { status: number; body: string } {
+  const script = query.get('weather')
+  if (!script) throw new Error('Network lookups are off in preview.')
+  if (script === 'down') throw new Error('offline')
+  const ok = (body: unknown) => ({ status: 200, body: JSON.stringify(body) })
+  if (url.includes('/points/')) return ok({ properties: { forecastGridData: GRID, forecast: `${GRID}/forecast` } })
+  const dayMs = 24 * 3_600_000
+  // Start of today in New York, close enough for a picture: 04:00 UTC.
+  const d = new Date()
+  const start = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 4) - (d.getUTCHours() < 4 ? dayMs : 0)
+  const iso = (ms: number) => new Date(ms).toISOString().replace('.000Z', '+00:00')
+  if (url.includes('/alerts/')) {
+    return ok({
+      features:
+        script === 'rain'
+          ? [{ properties: { event: 'Flood Watch', severity: 'Moderate', headline: 'Flood Watch', onset: iso(start + dayMs), ends: iso(start + 3 * dayMs) } }]
+          : [],
+    })
+  }
+  const rainByDay = script === 'rain' ? [0.05, 1.4, 0.6, 0.0, 0.3] : [0, 0, 0.02, 0, 0]
+  const summaries =
+    script === 'rain'
+      ? ['Mostly Cloudy', 'Showers And Thunderstorms', 'Light Rain', 'Mostly Sunny', 'Chance Light Rain']
+      : ['Sunny', 'Mostly Sunny', 'Partly Cloudy', 'Sunny', 'Mostly Sunny']
+  if (url.endsWith('/forecast')) {
+    return ok({ properties: { periods: summaries.map((shortForecast, i) => ({ startTime: iso(start + i * dayMs + 10 * 3_600_000), isDaytime: true, shortForecast })) } })
+  }
+  const rain: Array<{ validTime: string; value: number }> = []
+  const temp: Array<{ validTime: string; value: number }> = []
+  const pop: Array<{ validTime: string; value: number }> = []
+  const gust: Array<{ validTime: string; value: number }> = []
+  for (let i = 0; i < 5; i++) {
+    for (let b = 0; b < 4; b++) rain.push({ validTime: `${iso(start + i * dayMs + b * 6 * 3_600_000)}/PT6H`, value: (rainByDay[i]! * 25.4) / 4 })
+    temp.push({ validTime: `${iso(start + i * dayMs + 6 * 3_600_000)}/PT1H`, value: 9 + i })
+    temp.push({ validTime: `${iso(start + i * dayMs + 18 * 3_600_000)}/PT1H`, value: 22 - i })
+    pop.push({ validTime: `${iso(start + i * dayMs)}/PT24H`, value: rainByDay[i]! > 0.1 ? 80 : 10 })
+    gust.push({ validTime: `${iso(start + i * dayMs + 12 * 3_600_000)}/PT3H`, value: script === 'rain' && i === 1 ? 72 : 25 })
+  }
+  return ok({
+    properties: {
+      quantitativePrecipitation: { uom: 'wmoUnit:mm', values: rain },
+      temperature: { uom: 'wmoUnit:degC', values: temp },
+      probabilityOfPrecipitation: { uom: 'wmoUnit:percent', values: pop },
+      windGust: { uom: 'wmoUnit:km_h-1', values: gust },
+    },
+  })
+}
 // `?key=1` pretends a Google key is saved. `?google=miss|deny|ok` scripts what Google answers.
 let savedKey: string | null = query.get('key') === '1' ? 'PREVIEW-KEY-0000' : null
 
@@ -37,7 +91,8 @@ export async function invoke<T>(cmd: string, args?: unknown): Promise<T> {
     case 'restore_result_take':
       return null as T
     case 'geo_http_get': {
-      const { provider } = args as { provider: string }
+      const { provider, url } = args as { provider: string; url: string }
+      if (provider === 'nws') return nwsReply(url) as T
       const script = query.get('google')
       if (!script) throw new Error('Network lookups are off in preview.')
       const reply = (body: unknown) => ({ status: 200, body: JSON.stringify(body) }) as T

@@ -6,6 +6,7 @@ import { queryDates, queryJobs } from '../lib/db.ts'
 import { displayName, formatDate, formatTimeRange } from '../lib/format.ts'
 import { blankJobDraft, draftFromJob, type DateCount, type JobDraft, type JobRow } from '../lib/store.ts'
 import { ENABLE_JOB_CREATE } from '../lib/features.ts'
+import { WeatherBadge } from '../components/Weather.tsx'
 import { ErrorNote } from '../components/ErrorNote.tsx'
 import { downloadText } from '../lib/csv.ts'
 import { jobsCsv } from '../lib/exports.ts'
@@ -145,11 +146,12 @@ export function JobsScreen({
                 setAllDates(false)
                 onDateChange(day.schedule_date)
               }}
-              className={`inline-flex h-8 items-center rounded px-2 text-meta font-medium ${
+              className={`inline-flex h-8 items-center rounded px-2 py-1 text-meta font-medium ${
                 !allDates && date === day.schedule_date ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
               }`}
             >
               {formatDate(day.schedule_date)} · {day.n}
+              <WeatherBadge date={day.schedule_date} className={`ml-1.5 ${!allDates && date === day.schedule_date ? '!text-white' : ''}`} />
             </button>
           ))}
         </div>

@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatDateChip, todayInNewYork } from '../lib/format.ts'
 import { addDaysYmd } from '../lib/schedule.ts'
+import { WeatherBadge } from './Weather.tsx'
 
 export function DateChip({ date, onChange }: { date: string; onChange: (ymd: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -45,11 +46,12 @@ export function DateChip({ date, onChange }: { date: string; onChange: (ymd: str
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((value) => !value)}
-        className={`inline-flex h-8 items-center rounded-lg border bg-white px-2.5 text-sm font-medium tabular-nums ${
+        className={`inline-flex h-8 items-center gap-2 rounded-lg border bg-white px-2.5 text-sm font-medium tabular-nums ${
           'border-slate-300 text-slate-900 hover:bg-slate-50'
         }`}
       >
         {formatDateChip(date)}
+        <WeatherBadge date={date} />
       </button>
       <button
         type="button"

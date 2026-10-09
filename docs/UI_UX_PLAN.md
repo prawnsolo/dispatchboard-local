@@ -119,6 +119,10 @@ Confirmed by Pilot: in the real export a fireplace or gas log cleaning is logged
 - F7 Bulk edit in the Sheet. **Done.** Pick rows, set tech, date, zone, times or note.
 - F8 Drag from Backlog onto the calendar. **Dropped.** Local does not create or rearrange jobs for now, so there is nothing to drag. Leave `VITE_ENABLE_JOB_CREATE` off.
 - F9 CSV export of any view. **Done for Jobs, Backlog and Sheet.** CSV cells starting with = or @ are quoted as text.
+- F11 (new) Map pins show the job's own icon and color at every zoom; the type chips moved into Filters. **Done.**
+- F12 (new) Job summary (name, address, the job, call notes) at the top of every job panel and card. **Done.**
+- F13 (new) Google fix: Settings button and an after-import pop-up for addresses not found. **Done.** Asks for a key or for lookups to be allowed only when needed; a retry bypasses an old OpenStreetMap miss but not an old Google miss.
+- F14 (new) Five-day forecast (National Weather Service), opt-in and off by default. **Done.** Today strip, heavy-rain warning for underground tank installs (day of, day before, day after), badges on date chips and the week view. Only the yard's coordinates, rounded to two decimals, leave the PC.
 - F10 Job edit history. **Done.** Local job_history table (schema 6), last 50 edits per job, shown in the job drawer. Imports are not logged.
 
 ## 6. Suggested order

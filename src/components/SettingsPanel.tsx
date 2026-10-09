@@ -16,6 +16,9 @@ import { desktopShellAvailable, readGoogleMapsApiKey, testGoogleMapsApiKey, writ
 import { isMapTechVisible, useAllowNetworkGeocoding, useMapHiddenTechs } from '../lib/prefs.ts'
 import { UNASSIGNED_TECH } from '../lib/schedule.ts'
 import { useTheme, type ThemePref } from '../lib/theme.tsx'
+import { DEFAULT_THRESHOLDS, type WeatherThresholds } from '../lib/weather.ts'
+import { refreshWeather, setWeatherEnabled, setWeatherThresholds, useWeatherState } from '../lib/weather-store.ts'
+import { YARD } from '../lib/yard.ts'
 
 const THEMES: ReadonlyArray<{ id: ThemePref; label: string }> = [
   { id: 'auto', label: 'Auto' },
@@ -32,7 +35,7 @@ function Details({ label, children }: { label: string; children: React.ReactNode
   )
 }
 
-type MenuView = 'home' | 'display' | 'lookup' | 'data'
+type MenuView = 'home' | 'display' | 'lookup' | 'weather' | 'data'
 
 function MenuRow({ title, hint, onClick }: { title: string; hint?: string; onClick: () => void }) {
   return (
@@ -66,6 +69,112 @@ function NetworkGeocodeSetting() {
         <p>Last resort is OpenStreetMap. Map tiles load from OpenFreeMap whatever this is set to.</p>
         <p>Job rows stay in SQLite on this PC.</p>
       </Details>
+    </section>
+  )
+}
+
+const THRESHOLD_FIELDS: ReadonlyArray<{ key: keyof WeatherThresholds; label: string; unit: string; step: number; hint?: string }> = [
+  { key: 'heavyRainIn', label: 'Heavy rain', unit: 'inches in one day', step: 0.25 },
+  { key: 'multiDayRainIn', label: 'Extreme rain', unit: 'inches over 3 days', step: 0.25 },
+  { key: 'gustMph', label: 'Strong wind', unit: 'mph gusts', step: 5 },
+  { key: 'hotF', label: 'Very hot', unit: '°F high', step: 1 },
+  { key: 'coldF', label: 'Very cold', unit: '°F low', step: 1 },
+]
+
+function WeatherSetting() {
+  const weather = useWeatherState()
+  const [draft, setDraft] = useState<Record<string, string>>({})
+  const point = `${YARD.lat.toFixed(2)}, ${YARD.lng.toFixed(2)}`
+
+  function commit(key: keyof WeatherThresholds) {
+    const raw = draft[key]
+    if (raw === undefined) return
+    const value = Number(raw)
+    const next = { ...weather.thresholds, [key]: raw.trim() === '' || !Number.isFinite(value) ? DEFAULT_THRESHOLDS[key] : value }
+    setWeatherThresholds(next)
+    setDraft((d) => {
+      const { [key]: _gone, ...rest } = d
+      return rest
+    })
+  }
+
+  const when = weather.snapshot ? new Date(weather.snapshot.fetchedAt).toLocaleString() : null
+
+  return (
+    <section data-testid="weather-setting">
+      <label className="flex items-start gap-3 text-sm text-ink">
+        <input
+          type="checkbox"
+          className="mt-1"
+          data-testid="weather-toggle"
+          checked={weather.enabled}
+          onChange={(event) => setWeatherEnabled(event.target.checked)}
+        />
+        <span>
+          <span className="font-semibold">Show the five-day forecast</span>
+          <span className="mt-0.5 block text-ink-body">
+            Rain, wind and temperature from the National Weather Service. Warns when heavy rain could float an underground
+            tank before it is covered.
+          </span>
+        </span>
+      </label>
+      <Details label="What gets sent">
+        <p>Only the yard's location, rounded to about a mile ({point}). Nothing about a customer, address or job.</p>
+        <p>Free, no account or key. Looked up every couple of hours while the app is open, and only when this is on.</p>
+      </Details>
+
+      {weather.enabled ? (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="weather-refresh"
+              onClick={() => void refreshWeather(true)}
+              className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-body hover:border-ink hover:text-ink disabled:opacity-50"
+            >
+              Refresh now
+            </button>
+            <p className="text-sm text-ink-body" role="status">
+              {weather.status === 'loading' && !weather.snapshot ? 'Loading…' : null}
+              {weather.status === 'ok' && when ? `Updated ${when}` : null}
+            </p>
+          </div>
+          {weather.status === 'error' ? <p className="mt-2 text-sm text-error" role="alert">{weather.error}</p> : null}
+
+          <h3 className="mt-5 text-base font-semibold text-ink">When to warn</h3>
+          <p className="mt-1 text-sm text-ink-body">Change these to match what actually causes trouble.</p>
+          <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
+            {THRESHOLD_FIELDS.map((f) => (
+              <label key={f.key} className="contents text-sm text-ink">
+                <span>
+                  {f.label}
+                  <span className="block text-meta text-ink-label">{f.unit}</span>
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step={f.step}
+                  data-testid={`weather-th-${f.key}`}
+                  value={draft[f.key] ?? String(weather.thresholds[f.key])}
+                  onChange={(event) => setDraft((d) => ({ ...d, [f.key]: event.target.value }))}
+                  onBlur={() => commit(f.key)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commit(f.key)
+                  }}
+                  className="w-24 rounded-md border border-line bg-white px-2 py-1.5 text-right text-sm tabular-nums text-ink outline-none focus:border-brand"
+                />
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setWeatherThresholds(DEFAULT_THRESHOLDS)}
+            className="mt-3 text-sm font-medium text-ink underline underline-offset-2"
+          >
+            Reset to the standard numbers
+          </button>
+        </>
+      ) : null}
     </section>
   )
 }
@@ -368,12 +477,15 @@ export function SettingsPanel({
   onChanged,
   planningActive = false,
   techOptions = [],
+  initialView = 'home',
 }: {
   onClose: () => void
   onChanged: () => void
   planningActive?: boolean
   /** Technician names for Map visibility checkboxes (Specialists included when present). */
   techOptions?: string[]
+  /** Open straight to one page, e.g. from the forecast's "Set up weather" button. */
+  initialView?: 'home' | 'weather'
 }) {
   const titleId = useId()
   const { pref, setPref } = useTheme()
@@ -381,7 +493,7 @@ export function SettingsPanel({
   const [pathError, setPathError] = useState<string | null>(null)
   const [counts, setCounts] = useState<{ jobs: number; sites: number; backlog: number } | null>(null)
   const [wipeError, setWipeError] = useState<string | null>(null)
-  const [view, setView] = useState<MenuView>('home')
+  const [view, setView] = useState<MenuView>(initialView)
   const [wiping, setWiping] = useState(false)
   const [backingUp, setBackingUp] = useState(false)
   const [backupMessage, setBackupMessage] = useState<string | null>(null)
@@ -480,9 +592,11 @@ export function SettingsPanel({
     home: 'Menu',
     display: 'Display',
     lookup: 'Address lookup',
+    weather: 'Weather',
     data: 'Data',
   }
   const [lookupAllowed] = useAllowNetworkGeocoding()
+  const weatherOn = useWeatherState().enabled
   const buttonClass =
     'rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-body hover:border-ink hover:text-ink disabled:opacity-50'
 
@@ -530,6 +644,7 @@ export function SettingsPanel({
                 hint={lookupAllowed ? 'On' : 'Off'}
                 onClick={() => setView('lookup')}
               />
+              <MenuRow title="Weather" hint={weatherOn ? 'On' : 'Off'} onClick={() => setView('weather')} />
               <a
                 href="#/planning"
                 aria-current={planningActive ? 'page' : undefined}
@@ -594,6 +709,8 @@ export function SettingsPanel({
               </div>
             </>
           ) : null}
+
+          {view === 'weather' ? <WeatherSetting /> : null}
 
           {view === 'data' ? (
             <>

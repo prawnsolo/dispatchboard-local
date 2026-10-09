@@ -3,6 +3,7 @@ import { JobBlock } from './JobBlock.tsx'
 import { TechLoad } from './TechLoad.tsx'
 import { loadKey, type TechDayLoad } from '../lib/techLoad.ts'
 import { displayName, formatWeekdayHeading } from '../lib/format.ts'
+import { WeatherBadge } from './Weather.tsx'
 import {
   UNASSIGNED_TECH,
   canDragJob,
@@ -73,6 +74,7 @@ export function ResourceWeekGrid({
                   }`}
                 >
                   {formatWeekdayHeading(date)}
+                  <WeatherBadge date={date} className="ml-1.5 align-middle normal-case" />
                 </th>
               )
             })}

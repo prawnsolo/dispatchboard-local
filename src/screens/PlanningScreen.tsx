@@ -142,7 +142,7 @@ function MismatchSection({ revision }: { revision: number }) {
 
   return (
     <section className="rounded-lg border border-line p-4 shadow-card" data-testid="mismatch-rules">
-      <h3 className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Mismatch rules</h3>
+      <h3 className="text-base font-semibold text-ink">Mismatch rules</h3>
       <p className="mt-2 text-sm text-ink-body">
         On Apply, a job is flagged when a call reason contains the pattern and the activity note contains the keyword.
         Capacity blocks are not flagged. The seeded example is GAS CHECK ↔ CLEANING.
@@ -235,7 +235,7 @@ function RuleFields({
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label" htmlFor={`${idPrefix}-pattern`}>
+      <label className="text-sm font-medium text-ink-label" htmlFor={`${idPrefix}-pattern`}>
         Call reason pattern
         <input
           id={`${idPrefix}-pattern`}
@@ -245,7 +245,7 @@ function RuleFields({
           onChange={(event) => onChange({ ...draft, call_reason_pattern: event.target.value })}
         />
       </label>
-      <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label" htmlFor={`${idPrefix}-keyword`}>
+      <label className="text-sm font-medium text-ink-label" htmlFor={`${idPrefix}-keyword`}>
         Conflicting keyword
         <input
           id={`${idPrefix}-keyword`}
@@ -255,7 +255,7 @@ function RuleFields({
           onChange={(event) => onChange({ ...draft, conflicting_keyword: event.target.value })}
         />
       </label>
-      <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label sm:col-span-2" htmlFor={`${idPrefix}-notes`}>
+      <label className="text-sm font-medium text-ink-label sm:col-span-2" htmlFor={`${idPrefix}-notes`}>
         Notes
         <textarea
           id={`${idPrefix}-notes`}
@@ -358,9 +358,9 @@ function TemplateSection({ revision }: { revision: number }) {
     <section className="rounded-lg border border-line p-4 shadow-card" data-testid="templates">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Templates</h3>
+          <h3 className="text-base font-semibold text-ink">Templates</h3>
           <p className="mt-2 text-sm text-ink-body">
-            Apply a template from New job or the job drawer. The seeded Tank Install templates include required
+            Apply a template from the job drawer. The seeded Tank Install templates include required
             Excavator (Dan) scheduled. Trip 2 does not store a parent job.
           </p>
         </div>
@@ -417,7 +417,7 @@ function TemplateSection({ revision }: { revision: number }) {
       {editingId != null ? (
         <form onSubmit={(event) => void onSave(event)} className="mt-4 space-y-3">
           <p className="text-sm font-semibold text-ink">{editingId === 'new' ? 'New template' : 'Edit template'}</p>
-          <label className="block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="block text-sm font-medium text-ink-label">
             Name
             <input
               className={controlClass}
@@ -425,7 +425,7 @@ function TemplateSection({ revision }: { revision: number }) {
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
             />
           </label>
-          <label className="block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="block text-sm font-medium text-ink-label">
             Activity hint
             <input
               className={controlClass}
@@ -434,7 +434,7 @@ function TemplateSection({ revision }: { revision: number }) {
               onChange={(event) => setDraft({ ...draft, matches_activity_code: event.target.value })}
             />
           </label>
-          <label className="block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="block text-sm font-medium text-ink-label">
             Card color
             <input
               className={controlClass}
@@ -444,7 +444,7 @@ function TemplateSection({ revision }: { revision: number }) {
             />
           </label>
           <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Checklist</p>
+            <p className="text-sm font-medium text-ink-label">Checklist</p>
             {draft.items.map((item, index) => (
               <div key={index} className="flex flex-wrap items-center gap-2">
                 <input

@@ -12,7 +12,7 @@ const controlClass =
 function Field({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
   return (
     <label className={`flex flex-col gap-1 ${className ?? ''}`}>
-      <span className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">{label}</span>
+      <span className="text-sm font-medium text-ink-label">{label}</span>
       {children}
     </label>
   )
@@ -21,7 +21,7 @@ function Field({ label, children, className }: { label: string; children: ReactN
 function Readout({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">{label}</span>
+      <span className="text-sm font-medium text-ink-label">{label}</span>
       <p className="text-sm text-ink">{value.trim() ? value : '—'}</p>
     </div>
   )
@@ -134,7 +134,7 @@ export function JobDrawer({
       >
         <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            <p className="text-sm font-medium text-slate-600">
               {capacity ? 'Capacity' : initial.id == null ? 'Tentative' : 'Job'}
             </p>
             <h2 id={titleId} className="text-base font-semibold tracking-tight text-slate-900">

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { JobBlock } from './JobBlock.tsx'
 import { TechLoad } from './TechLoad.tsx'
 import { loadKey, type TechDayLoad } from '../lib/techLoad.ts'
-import { formatDayHeading, todayInNewYork } from '../lib/format.ts'
+import { displayName, todayInNewYork } from '../lib/format.ts'
 import {
   DAY_GRID_END_MIN,
   DAY_GRID_PX_PER_HOUR,
@@ -126,8 +126,7 @@ export function ResourceDayGrid({
             return (
               <div key={tech} className={`relative min-w-[9.5rem] flex-1 border-r border-slate-200 last:border-r-0 ${ptoKeys?.has(`${tech}|${date}`) ? 'bg-slate-100/80' : ''}`} data-testid={`day-col-${tech}`} data-pto={ptoKeys?.has(`${tech}|${date}`) ? '1' : undefined}>
                 <div className={`sticky top-0 z-20 flex min-h-14 flex-col items-center justify-center gap-0.5 border-b border-slate-200 px-1.5 py-1 text-center ${ptoKeys?.has(`${tech}|${date}`) ? 'bg-slate-200/90' : 'bg-slate-50'}`}>
-                  <p className="max-w-full truncate text-xs font-medium uppercase tracking-wide text-slate-500">{formatDayHeading(date)}</p>
-                  <p className="max-w-full truncate text-xs font-semibold text-slate-900">{tech}</p>
+                  <p className="max-w-full truncate text-sm font-semibold text-slate-900">{displayName(tech)}</p>
                   {ptoKeys?.has(`${tech}|${date}`) ? (
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-600" data-testid="pto-label">PTO</p>
                   ) : null}

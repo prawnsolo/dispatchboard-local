@@ -505,7 +505,7 @@ export function MapScreen({
 
         <div className="absolute bottom-3 left-3 z-10 w-[min(20rem,calc(100%-1.5rem))] space-y-2">
           <div className="max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white/95 shadow-sm">
-            <p className="border-b border-slate-200 px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+            <p className="border-b border-slate-200 px-2 py-1 text-sm font-medium text-slate-600">
               Unmapped ({unmapped.length})
             </p>
             {unmapped.length === 0 ? (
@@ -550,7 +550,7 @@ export function MapScreen({
             )}
             {toCheck.length ? (
               <div data-testid="pins-to-check">
-                <p className="border-y border-slate-200 px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+                <p className="border-y border-slate-200 px-2 py-1 text-sm font-medium text-slate-600">
                   Check these pins ({toCheck.length})
                 </p>
                 <ul>
@@ -614,7 +614,7 @@ export function MapScreen({
           ) : null}
           {selectedBacklog ? (
             <div className="rounded-md border border-slate-200 bg-white/95 p-2 text-xs shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Backlog</p>
+              <p className="text-sm font-medium text-slate-600">Backlog</p>
               <p className="mt-0.5 font-semibold text-slate-900">
                 {selectedBacklog.customer_name?.trim() || BACKLOG_TYPE_LABELS[selectedBacklog.backlog_type]}
               </p>
@@ -746,7 +746,7 @@ function MapFilters({
           aria-labelledby={titleId}
           className="absolute left-0 top-full z-40 mt-1 w-60 space-y-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
         >
-          <p id={titleId} className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p id={titleId} className="text-sm font-medium text-slate-600">
             Map filters
           </p>
           <label className="block text-xs text-slate-600">

@@ -3,7 +3,7 @@ import { JobDrawer } from '../components/JobDrawer.tsx'
 import { ActivityCell } from '../components/ActivityCell.tsx'
 import { JobMarks } from '../components/JobMarks.tsx'
 import { queryDates, queryJobs } from '../lib/db.ts'
-import { formatDate, formatTimeRange } from '../lib/format.ts'
+import { displayName, formatDate, formatTimeRange } from '../lib/format.ts'
 import { blankJobDraft, draftFromJob, type DateCount, type JobDraft, type JobRow } from '../lib/store.ts'
 import { ENABLE_JOB_CREATE } from '../lib/features.ts'
 import { ErrorNote } from '../components/ErrorNote.tsx'
@@ -132,7 +132,7 @@ export function JobsScreen({
             type="button"
             onClick={() => setAllDates(true)}
             className={`inline-flex h-8 items-center rounded px-2 text-meta font-medium uppercase tracking-wide ${
-              allDates ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'
+              allDates ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
             }`}
           >
             All dates
@@ -146,7 +146,7 @@ export function JobsScreen({
                 onDateChange(day.schedule_date)
               }}
               className={`inline-flex h-8 items-center rounded px-2 text-meta font-medium ${
-                !allDates && date === day.schedule_date ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'
+                !allDates && date === day.schedule_date ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
               }`}
             >
               {formatDate(day.schedule_date)} · {day.n}
@@ -221,7 +221,7 @@ export function JobsScreen({
                 >
                   <td className="whitespace-nowrap px-2 py-1">{formatDate(job.schedule_date)}</td>
                   <td className="whitespace-nowrap px-2 py-1">{formatTimeRange(job.begin_time, job.end_time)}</td>
-                  <td className="px-2 py-1">{job.technician_name ?? '—'}</td>
+                  <td className="px-2 py-1">{job.technician_name ? displayName(job.technician_name) : '—'}</td>
                   <td className="whitespace-nowrap px-2 py-1">
                     {job.is_capacity_block ? (
                       <span className="rounded bg-slate-100 px-1.5 py-px text-meta font-medium uppercase tracking-wide text-slate-600">

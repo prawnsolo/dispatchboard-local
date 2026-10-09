@@ -193,7 +193,7 @@ export function BestDays({
           ) : null}
           {summary.unscheduled.length > 0 ? (
             <section className="mt-3">
-              <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-ink-label">Nearby jobs with no date yet</h3>
+              <h3 className="px-2 text-sm font-semibold text-ink-label">Nearby jobs with no date yet</h3>
               {summary.unscheduled.slice(0, showAll ? undefined : 8).map(({ job, miles: distance }) => (
                 <button
                   key={job.id}
@@ -209,7 +209,7 @@ export function BestDays({
           ) : null}
           {summary.backlog.length > 0 ? (
             <section className="mt-3">
-              <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-ink-label">Open backlog nearby</h3>
+              <h3 className="px-2 text-sm font-semibold text-ink-label">Open backlog nearby</h3>
               {summary.backlog.slice(0, showAll ? undefined : 8).map(({ item, miles: distance }) => (
                 <button
                   key={item.id}

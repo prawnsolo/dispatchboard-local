@@ -143,7 +143,7 @@ export function BacklogScreen({
               {query.trim() ? ' · header search' : ''}
             </p>
           </div>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Type
             <select
               value={typeFilter}
@@ -158,7 +158,7 @@ export function BacklogScreen({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Status
             <select
               value={statusFilter}
@@ -190,7 +190,9 @@ export function BacklogScreen({
           </button>
         </div>
         <p className="mt-2 max-w-prose text-xs text-slate-600">
-          Tank pickup, lockout, monitor swap, and meter site stay here until you promote one into a tentative job.
+          {ENABLE_JOB_CREATE
+            ? 'Tank pickup, lockout, monitor swap, and meter site stay here until you promote one into a tentative job. '
+            : 'Standing work that is not in Pegasus yet: tank pickups, lockouts, monitor swaps and meter sites. '}
           ADD import does not write this list.
         </p>
         {error && !draft ? (
@@ -198,7 +200,7 @@ export function BacklogScreen({
         ) : null}
         <div className="mt-3 min-h-0 flex-1 overflow-auto rounded-lg border border-line">
           <table className="w-full border-collapse text-left text-sm">
-            <thead className="sticky top-0 bg-surface text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+            <thead className="sticky top-0 bg-surface text-sm font-medium text-ink-label">
               <tr>
                 <th className="px-3 py-2 font-medium">Type</th>
                 <th className="px-3 py-2 font-medium">Customer</th>
@@ -242,7 +244,28 @@ export function BacklogScreen({
             </tbody>
           </table>
           {!loading && visible.length === 0 ? (
-            <p className="px-3 py-6 text-sm text-ink-body">No backlog items on this filter.</p>
+            <div className="px-3 py-6">
+              <p className="text-sm font-semibold text-ink">
+                {typeFilter || statusFilter || query.trim() ? 'No backlog items match these filters' : 'No backlog items yet'}
+              </p>
+              <p className="mt-1 max-w-prose text-sm text-ink-body">
+                {typeFilter || statusFilter || query.trim()
+                  ? 'Clear the type or status filter, or the header search, to see the rest.'
+                  : 'Add the first one with New item. Keep an address and a note so the item can be found on the map later.'}
+              </p>
+              {typeFilter || statusFilter ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTypeFilter('')
+                    setStatusFilter('')
+                  }}
+                  className="mt-3 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-slate-50"
+                >
+                  Clear filters
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </div>
@@ -261,7 +284,7 @@ export function BacklogScreen({
           {error ? (
             <ErrorNote className="text-sm" error={error} />
           ) : null}
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Type
             <select
               value={draft.backlog_type}
@@ -275,7 +298,7 @@ export function BacklogScreen({
               ))}
             </select>
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Customer
             <input
               value={draft.customer_name}
@@ -284,7 +307,7 @@ export function BacklogScreen({
             />
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+            <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
               Cust #
               <input
                 value={draft.customer_number}
@@ -292,7 +315,7 @@ export function BacklogScreen({
                 className={controlClass}
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+            <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
               Zone
               <input
                 value={draft.zone_code}
@@ -301,7 +324,7 @@ export function BacklogScreen({
               />
             </label>
           </div>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Street
             <input
               value={draft.address_street}
@@ -309,7 +332,7 @@ export function BacklogScreen({
               className={controlClass}
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             City ST ZIP
             <input
               value={draft.address_city_state_zip}
@@ -317,7 +340,7 @@ export function BacklogScreen({
               className={controlClass}
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Address line
             <input
               value={draft.address_raw}
@@ -326,7 +349,7 @@ export function BacklogScreen({
             />
           </label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+            <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
               Lat
               <input
                 value={draft.lat}
@@ -334,7 +357,7 @@ export function BacklogScreen({
                 className={controlClass}
               />
             </label>
-            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+            <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
               Lng
               <input
                 value={draft.lng}
@@ -344,7 +367,7 @@ export function BacklogScreen({
             </label>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+            <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
               Priority
               <select
                 value={draft.priority}
@@ -358,7 +381,7 @@ export function BacklogScreen({
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+            <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
               Status
               <select
                 value={draft.status}
@@ -373,7 +396,7 @@ export function BacklogScreen({
               </select>
             </label>
           </div>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Campaign
             <input
               value={draft.campaign}
@@ -381,7 +404,7 @@ export function BacklogScreen({
               className={controlClass}
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
             Notes
             <textarea
               value={draft.notes}
@@ -397,7 +420,7 @@ export function BacklogScreen({
                 Creates a tentative job with no work order and stores that job on this item.
               </p>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+                <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
                   Date
                   <input
                     type="date"
@@ -406,7 +429,7 @@ export function BacklogScreen({
                     className={controlClass}
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+                <label className="flex flex-col gap-1 text-sm font-medium text-ink-label">
                   Tech
                   <input
                     value={promoteTech}

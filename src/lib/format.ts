@@ -81,3 +81,18 @@ export function formatCustomerAccount(value: string | null | undefined): string 
   if (!trimmed) return null
   return trimmed.startsWith('#') ? trimmed : `#${trimmed}`
 }
+
+/**
+ * ADD stores technician names in capitals. Show them as names ("Chad Taylor",
+ * "Pat McDonald", "Jo O'Brien"). Display only: stored values and matching keep the original.
+ */
+export function displayName(name: string | null | undefined): string {
+  const raw = name?.trim()
+  if (!raw) return ''
+  // Leave mixed-case input alone: someone already typed it the way they want.
+  if (raw !== raw.toUpperCase()) return raw
+  return raw
+    .toLowerCase()
+    .replace(/(^|[\s'\-])([a-z])/g, (_m, a: string, b: string) => a + b.toUpperCase())
+    .replace(/\bMc([a-z])/g, (_m, c: string) => 'Mc' + c.toUpperCase())
+}

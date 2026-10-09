@@ -99,10 +99,9 @@ export function JobBlock({
       <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium text-slate-500">
         <span className="inline-flex items-center gap-1">
           <span className={`size-1.5 rounded-full ${CALENDAR_KIND_DOT_CLASS[kind]}`} aria-hidden="true" />
-          {CALENDAR_KIND_LABEL[kind]}
+          {kind === 'in_pegasus' && wo ? `WO ${wo}` : CALENDAR_KIND_LABEL[kind]}
         </span>
-        {wo ? <span>WO {wo}</span> : null}
-        {locked && kind !== 'capacity' ? <span className="text-slate-400">locked</span> : null}
+        {kind !== 'in_pegasus' && wo ? <span>WO {wo}</span> : null}
       </p>
     </div>
   )

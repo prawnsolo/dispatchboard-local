@@ -130,7 +130,7 @@ export function UnmappedFix({
         className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-lg bg-white p-5 shadow-card"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+        <p className="text-sm font-medium text-ink-label">
           {jobHasMappedPin(job) ? `Review pin · ${pinConfidence(job.geocode_source).label}` : 'Unmapped'}
         </p>
         <h2 id={titleId} className="text-lg font-semibold">
@@ -146,7 +146,7 @@ export function UnmappedFix({
             : 'Retry sends this street address to the public US Census geocoder. That call runs only after network geocoding is allowed. Google is not called until you paste a key in Settings. Pin save writes latitude and longitude on this PC and does not use the network.'}
         </p>
 
-        <label className="mt-4 block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+        <label className="mt-4 block text-sm font-medium text-ink-label">
           Street
           <input
             value={street}
@@ -154,7 +154,7 @@ export function UnmappedFix({
             className="mt-1 w-full rounded-md border border-line px-3 py-2 text-sm normal-case tracking-normal text-ink outline-none focus:border-brand"
           />
         </label>
-        <label className="mt-3 block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+        <label className="mt-3 block text-sm font-medium text-ink-label">
           City, state, ZIP
           <input
             value={csz}
@@ -185,7 +185,7 @@ export function UnmappedFix({
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="text-sm font-medium text-ink-label">
             Latitude
             <input
               value={lat}
@@ -194,7 +194,7 @@ export function UnmappedFix({
               className="mt-1 w-full rounded-md border border-line px-3 py-2 text-sm normal-case tracking-normal text-ink outline-none focus:border-brand"
             />
           </label>
-          <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="text-sm font-medium text-ink-label">
             Longitude
             <input
               value={lng}

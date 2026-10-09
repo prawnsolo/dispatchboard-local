@@ -1,3 +1,4 @@
+import { displayName } from '../lib/format.ts'
 import { formatHours } from '../lib/jobDurations.ts'
 import {
   problemTotal,
@@ -49,7 +50,7 @@ export function ProblemsStrip({
       selection: { kind: 'over_capacity', tech: row.tech },
       tone: 'red',
       count: row.jobs,
-      label: `Over · ${row.tech} ${formatHours(row.totalHours)}h / ${formatHours(row.shiftHours)}h`,
+      label: `Over · ${displayName(row.tech)} ${formatHours(row.totalHours)}h / ${formatHours(row.shiftHours)}h`,
       title: `${row.tech}: ${formatHours(row.bookedHours)}h work + ${formatHours(row.driveHours)}h drive = ${formatHours(row.totalHours)}h on a ${formatHours(row.shiftHours)}h shift (duration table + crow-flies drive)`,
     })),
   ].filter((item) => item.count > 0)
@@ -64,7 +65,7 @@ export function ProblemsStrip({
       aria-label={`${prefix} problems`}
     >
       {problemTotal(summary) === 0 && isToday ? null : (
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{prefix}</span>
+        <span className="text-sm font-semibold text-slate-700">{prefix}</span>
       )}
       {problemTotal(summary) === 0 ? (
         <span className="text-xs text-slate-700" data-testid="problems-none">

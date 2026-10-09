@@ -76,7 +76,7 @@ export function DateChip({ date, onChange }: { date: string; onChange: (ymd: str
           aria-labelledby={titleId}
           className="absolute left-0 top-full z-30 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
         >
-          <p id={titleId} className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p id={titleId} className="text-sm font-medium text-slate-600">
             Date
           </p>
           <label className="mt-2 flex flex-col gap-1 text-sm text-ink">

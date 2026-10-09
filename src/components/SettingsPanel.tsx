@@ -185,7 +185,7 @@ function GoogleKeySetting() {
       ) : (
         <p className="mt-2 text-sm text-ink-label">No key saved.</p>
       )}
-      <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-slate-500">
+      <label className="mt-3 block text-sm font-medium text-slate-600">
         {hasKey ? 'Replace key' : 'API key'}
         <input
           type={reveal ? 'text' : 'password'}
@@ -521,7 +521,7 @@ export function SettingsPanel({
           {view === 'display' ? (
             <>
               <section data-testid="appearance-setting">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Appearance</h3>
+                <h3 className="text-base font-semibold text-ink">Appearance</h3>
                 <div className="mt-2 flex rounded-md border border-slate-300 p-0.5" role="radiogroup" aria-label="Appearance">
                   {THEMES.map((theme) => {
                     const active = pref === theme.id
@@ -543,7 +543,7 @@ export function SettingsPanel({
                 </div>
               </section>
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Map technicians</h3>
+                <h3 className="text-base font-semibold text-ink">Map technicians</h3>
                 <div className="mt-2">
                   <MapTechVisibilitySetting techOptions={techOptions} />
                 </div>
@@ -555,7 +555,7 @@ export function SettingsPanel({
             <>
               <NetworkGeocodeSetting />
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Google Maps API key</h3>
+                <h3 className="text-base font-semibold text-ink">Google Maps API key</h3>
                 <div className="mt-2">
                   <GoogleKeySetting />
                 </div>
@@ -590,7 +590,7 @@ export function SettingsPanel({
               </section>
 
               <section data-testid="clear-scheduled">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Clear scheduled jobs</h3>
+                <h3 className="text-base font-semibold text-ink">Clear scheduled jobs</h3>
                 <p className="mt-2 text-sm text-ink-body">Deletes every dated job. Undated jobs, sites and rules stay.</p>
                 {!confirmClear ? (
                   <button
@@ -608,7 +608,7 @@ export function SettingsPanel({
                   </button>
                 ) : (
                   <div className="mt-3 space-y-2 rounded-md border border-line bg-surface p-3">
-                    <label className="block text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <label className="block text-sm font-medium text-slate-600">
                       Type {CLEAR_SCHEDULED_CONFIRM} to confirm
                       <input
                         type="text"
@@ -653,7 +653,7 @@ export function SettingsPanel({
               </section>
 
               <section>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Wipe local database</h3>
+                <h3 className="text-base font-semibold text-ink">Wipe local database</h3>
                 <p className="mt-2 text-sm text-ink-body">Deletes all jobs, sites, backlog and caches. Rules and templates stay.</p>
                 <button type="button" disabled={wiping || Boolean(pathError)} onClick={() => void onWipe()} className={`mt-3 ${buttonClass}`}>
                   {wiping ? 'Wiping…' : 'Wipe local database'}

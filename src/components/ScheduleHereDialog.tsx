@@ -60,7 +60,7 @@ export function ScheduleHereDialog({
         data-testid="schedule-here-sheet"
         className="w-full max-w-md rounded-lg bg-white p-5 shadow-card"
       >
-        <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Best days</p>
+        <p className="text-sm font-medium text-ink-label">Best days</p>
         <h2 id="schedule-here-title" className="text-lg font-semibold">
           Schedule here
         </h2>

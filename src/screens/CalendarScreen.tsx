@@ -5,9 +5,9 @@ import { JobDrawer } from '../components/JobDrawer.tsx'
 import { ResourceDayGrid } from '../components/ResourceDayGrid.tsx'
 import { ResourceWeekGrid } from '../components/ResourceWeekGrid.tsx'
 import { moveLocalJob, queryJobs } from '../lib/db.ts'
-import { formatDate } from '../lib/format.ts'
 import {
   addDaysYmd,
+  calendarKind,
   firstScheduledDate,
   isCapacityBlock,
   jobsInRange,
@@ -43,8 +43,7 @@ export function CalendarScreen({
   const [view, setView] = useState<CalView>('timegrid')
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [loaded, setLoaded] = useState(false)
-  const dayTypes = useMemo(() => countJobTypes(jobs.filter((job) => !isCapacityBlock(job))), [jobs])
-  const [error, setError] = useState<string | null>(null)
+    const [error, setError] = useState<string | null>(null)
   const [persistError, setPersistError] = useState<string | null>(null)
   const [draft, setDraft] = useState<JobDraft | null>(null)
   const [session, setSession] = useState(0)
@@ -89,6 +88,9 @@ export function CalendarScreen({
   }, [shown, weekJobs])
   const sampleDate = firstScheduledDate(jobs)
   const itemCount = view === 'timegrid' ? dayJobs.length : weekJobs.length
+  const inView = view === 'timegrid' ? dayJobs : weekJobs
+  const dayTypes = useMemo(() => countJobTypes(inView.filter((job) => !isCapacityBlock(job))), [inView])
+  const kindsInView = useMemo(() => new Set(inView.map((job) => calendarKind(job))), [inView])
   const emptyHere = jobs.length > 0 && (view === 'timegrid' ? dayJobs.length === 0 : weekJobs.length === 0)
 
   function openJob(job: JobRow) {
@@ -134,7 +136,7 @@ export function CalendarScreen({
           ›
         </button>
         <p className="text-xs text-slate-600">
-          {itemCount} {itemCount === 1 ? 'item' : 'items'} {view === 'timegrid' ? 'this day' : 'this week'} · work orders stay locked
+          {itemCount} {itemCount === 1 ? 'item' : 'items'} {view === 'timegrid' ? 'this day' : 'this week'}
         </p>
         <div className="ml-auto inline-flex rounded-md border border-slate-300 p-0.5" role="group" aria-label="Calendar layout">
           <button
@@ -160,10 +162,9 @@ export function CalendarScreen({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-chrome py-1 text-meta text-slate-600">
-        <span className={CALENDAR_KIND_LEGEND_CLASS.tentative}>Tentative · drag</span>
-        <span className={CALENDAR_KIND_LEGEND_CLASS.in_pegasus}>In Pegasus · locked</span>
-        <span className={CALENDAR_KIND_LEGEND_CLASS.capacity}>Capacity</span>
-        <span>{formatDate(date)}</span>
+        {kindsInView.has('tentative') ? <span className={CALENDAR_KIND_LEGEND_CLASS.tentative}>Tentative</span> : null}
+        {kindsInView.has('in_pegasus') ? <span className={CALENDAR_KIND_LEGEND_CLASS.in_pegasus}>In Pegasus</span> : null}
+        {kindsInView.has('capacity') ? <span className={CALENDAR_KIND_LEGEND_CLASS.capacity}>Capacity</span> : null}
       </div>
       {dayTypes.length ? (
         <div className="shrink-0 border-b border-slate-200 bg-white px-chrome py-1.5">

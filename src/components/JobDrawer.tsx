@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { JobChecklist } from './JobChecklist.tsx'
 import { JobHistory } from './JobHistory.tsx'
+import { JobSummary } from './JobSummary.tsx'
 import { zoneCodeFromServiceZone } from '../lib/add.ts'
 import { applyLocalTemplate, saveLocalJob } from '../lib/db.ts'
 import { announceJobEdited } from '../lib/undo.ts'
@@ -132,17 +133,14 @@ export function JobDrawer({
         className="flex h-full w-full max-w-[640px] flex-col border-l border-slate-200 bg-white shadow-sm outline-none"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-200 px-4 py-2">
           <div>
             <p className="text-sm font-medium text-slate-600">
               {capacity ? 'Capacity' : initial.id == null ? 'Tentative' : 'Job'}
+              <span className="font-normal"> · {woSummary(initial)}</span>
             </p>
-            <h2 id={titleId} className="text-base font-semibold tracking-tight text-slate-900">
-              {title}
-            </h2>
-            <p className="mt-1 text-sm text-ink-body">{woSummary(initial)}</p>
             {mismatchFlag ? (
-              <p className="mt-2 text-sm font-medium text-error" title={mismatchNote ?? undefined}>
+              <p className="mt-1 text-sm font-medium text-error" title={mismatchNote ?? undefined}>
                 ≠ {mismatchNote || 'Call reason / note mismatch'}
               </p>
             ) : null}
@@ -150,10 +148,14 @@ export function JobDrawer({
           <button
             type="button"
             onClick={requestClose}
-            className="rounded-md px-3 py-2 text-sm font-semibold text-ink-body hover:bg-surface hover:text-ink"
+            className="rounded-md px-3 py-1.5 text-sm font-semibold text-ink-body hover:bg-surface hover:text-ink"
           >
             Close
           </button>
+        </div>
+
+        <div className="max-h-[45vh] shrink-0 overflow-auto border-b border-slate-200 bg-slate-50 px-4 py-3">
+          <JobSummary job={{ ...form, customer_name: capacity ? form.customer_name || title : form.customer_name }} titleId={titleId} />
         </div>
 
         <form id="job-editor" onSubmit={(event) => void onSubmit(event)} className="flex-1 space-y-3 overflow-auto px-4 py-3" spellCheck={false}>

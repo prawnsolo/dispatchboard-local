@@ -6,6 +6,8 @@ import { LocalMap, type MapPinBacklog, type MapPinJob } from '../components/Loca
 import { MapChromePortal } from '../components/MapChromeSlot.tsx'
 import { NearbyResult, NearbySearch } from '../components/NearbySearch.tsx'
 import { ScheduleHereDialog } from '../components/ScheduleHereDialog.tsx'
+import { JobIcon } from '../components/JobIcon.tsx'
+import { JobSummary } from '../components/JobSummary.tsx'
 import { UnmappedFix } from '../components/UnmappedFix.tsx'
 import { BACKLOG_TYPE_LABELS } from '../lib/backlog.ts'
 import { checkLocalDriveTimes, geocodeLocalJobs, queryBacklog, queryJobs } from '../lib/db.ts'
@@ -525,12 +527,16 @@ export function MapScreen({
               <ul>
                 {unmapped.map((job) => (
                   <li key={job.id} className="flex items-center justify-between gap-2 border-b border-slate-100 py-0.5 pl-2 pr-1 last:border-b-0">
-                    <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 truncate text-xs font-medium text-slate-900">
-                        <span className="truncate">{job.customer_name}</span>
-                        <JobMarks job={job} />
-                      </p>
-                      <p className="truncate text-xs text-slate-500">{addressLine(job)}</p>
+                    <div className="flex min-w-0 items-start gap-1.5">
+                      <JobIcon job={job} size={20} />
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 truncate text-xs font-medium text-slate-900">
+                          <span className="truncate">{job.customer_name}</span>
+                          <JobMarks job={job} />
+                        </p>
+                        <p className="truncate text-xs text-slate-600">{addressLine(job)}</p>
+                        <p className="truncate text-xs text-slate-500">{job.activity_1}</p>
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -556,11 +562,15 @@ export function MapScreen({
                 <ul>
                   {toCheck.map((job) => (
                     <li key={job.id} className="flex items-center justify-between gap-2 border-b border-slate-100 py-0.5 pl-2 pr-1 last:border-b-0">
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-medium text-slate-900">{job.customer_name}</p>
-                        <p className="truncate text-xs text-slate-500">
-                          {pinConfidence(job.geocode_source).label} · {addressLine(job)}
-                        </p>
+                      <div className="flex min-w-0 items-start gap-1.5">
+                        <JobIcon job={job} size={20} />
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-medium text-slate-900">{job.customer_name}</p>
+                          <p className="truncate text-xs text-slate-600">{addressLine(job)}</p>
+                          <p className="truncate text-xs text-slate-500">
+                            {job.activity_1} · {pinConfidence(job.geocode_source).label}
+                          </p>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -580,21 +590,20 @@ export function MapScreen({
             ) : null}
           </div>
           {selected ? (
-            <div className="rounded-md border border-slate-200 bg-white/95 p-2 text-xs shadow-sm">
-              <p className="flex flex-wrap items-center gap-1.5 font-semibold text-slate-900">
-                <span className="min-w-0 truncate">{selected.customer_name}</span>
+            <div className="rounded-md border border-slate-200 bg-white/95 p-2 text-xs shadow-sm" data-testid="map-selected-card">
+              <JobSummary job={selected} compact />
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <JobMarks job={selected} />
-              </p>
-              {bootsFlags.has(String(selected.id)) ? (
-                <span
-                  className="mt-1 inline-flex items-center rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[12px] font-semibold text-amber-900"
-                  data-testid="boots-chip"
-                >
-                  {BOOTS_CHIP_LABEL}
-                </span>
-              ) : null}
-              <p className="mt-0.5 text-slate-600">{addressLine(selected)}</p>
-              <p className="mt-0.5 text-slate-500">
+                {bootsFlags.has(String(selected.id)) ? (
+                  <span
+                    className="inline-flex items-center rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[12px] font-semibold text-amber-900"
+                    data-testid="boots-chip"
+                  >
+                    {BOOTS_CHIP_LABEL}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-slate-500">
                 {pinConfidence(selected.geocode_source).label}
                 {selected.lat != null && selected.lng != null ? ` · ${selected.lat}, ${selected.lng}` : ''}
               </p>

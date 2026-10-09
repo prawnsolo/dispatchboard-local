@@ -2,13 +2,15 @@ import { Icon } from './Icon.tsx'
 import { GLYPH_COLOR, glyphToneFor, jobIcon } from '../lib/job-icons.ts'
 import { isCapacityBlock } from '../lib/schedule.ts'
 import { jobPinColor } from '../lib/colors.ts'
-import type { JobRow } from '../lib/store.ts'
+
+export type IconJob = Parameters<typeof jobIcon>[0] &
+  Parameters<typeof jobPinColor>[0] & { is_capacity_block: number | boolean | string }
 
 /**
  * The job-type icon on its tinted chip. The chip color is the activity color;
  * the glyph flips between white and near-black so it always clears 3:1.
  */
-export function JobIcon({ job, size = 20 }: { job: JobRow; size?: number }) {
+export function JobIcon({ job, size = 20 }: { job: IconJob; size?: number }) {
   const info = jobIcon(job)
   const fill = isCapacityBlock(job) ? '#64748b' : jobPinColor(job)
   const glyph = GLYPH_COLOR[glyphToneFor(fill)]

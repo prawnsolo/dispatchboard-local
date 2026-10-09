@@ -66,3 +66,33 @@ export function writeSheetViews(views: readonly SheetView[]): void {
     // storage blocked: views last for this session only
   }
 }
+
+/** Job types hidden on the Map. Type keys that no longer exist are harmless. */
+export const MAP_HIDDEN_TYPES_KEY = 'dispatchboard.local.mapHiddenTypes'
+
+export function parseHiddenTypes(raw: string | null): Set<string> {
+  if (!raw) return new Set()
+  try {
+    const data: unknown = JSON.parse(raw)
+    if (!Array.isArray(data)) return new Set()
+    return new Set(data.filter((x): x is string => typeof x === 'string').slice(0, 50))
+  } catch {
+    return new Set()
+  }
+}
+
+export function readHiddenTypes(): Set<string> {
+  try {
+    return typeof localStorage === 'undefined' ? new Set() : parseHiddenTypes(localStorage.getItem(MAP_HIDDEN_TYPES_KEY))
+  } catch {
+    return new Set()
+  }
+}
+
+export function writeHiddenTypes(types: ReadonlySet<string>): void {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(MAP_HIDDEN_TYPES_KEY, JSON.stringify([...types]))
+  } catch {
+    // storage blocked: the filter lasts for this session only
+  }
+}

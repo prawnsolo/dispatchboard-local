@@ -205,7 +205,9 @@ function MismatchSection({ revision }: { revision: number }) {
             )}
           </li>
         ))}
-        {rules.length === 0 ? <li className="py-3 text-sm text-ink-body">No rules yet.</li> : null}
+        {rules.length === 0 ? <li className="max-w-prose py-3 text-sm text-ink-body">
+            No rules yet. A rule flags a job when its call reason and its note disagree, for example GAS CHECK with a note that says CLEANING. Add one below.
+          </li> : null}
       </ul>
       <form onSubmit={(event) => void onAdd(event)} className="mt-4 space-y-2">
         <p className="text-sm font-semibold text-ink">Add a rule</p>
@@ -400,7 +402,17 @@ function TemplateSection({ revision }: { revision: number }) {
             </div>
           </li>
         ))}
-        {templates.length === 0 ? <li className="py-3 text-sm text-ink-body">No templates yet.</li> : null}
+        {templates.length === 0 ? <li className="max-w-prose py-3 text-sm text-ink-body">
+            No templates yet. A template is a checklist that copies onto a job with a matching activity, such as the excavator call on a tank install.
+            {editingId == null ? (
+              <>
+                {' '}
+                <button type="button" onClick={startNew} className="font-semibold text-slate-900 underline underline-offset-2">
+                  Add the first one
+                </button>
+              </>
+            ) : null}
+          </li> : null}
       </ul>
       {editingId != null ? (
         <form onSubmit={(event) => void onSave(event)} className="mt-4 space-y-3">

@@ -15,6 +15,7 @@ import { jobPinColor, mapScheduleSignal, mapScheduleStroke } from '../lib/colors
 import { JobTypeChips, countJobTypes, jobTypeKey } from '../components/JobTypeChips.tsx'
 import { glyphToneFor, jobIcon } from '../lib/job-icons.ts'
 import { glyphId } from '../lib/pin-glyphs.ts'
+import { readHiddenTypes, writeHiddenTypes } from '../lib/saved-views.ts'
 import { asCoord, jobHasMappedPin, pinConfidence } from '../lib/geocode.ts'
 import { readGoogleMapsApiKey, useHasGoogleMapsApiKey } from '../lib/google-key.ts'
 import { ALLOW_NETWORK_GEOCODING_CONFIRM, isMapTechVisible, useAllowNetworkGeocoding, useMapHiddenTechs } from '../lib/prefs.ts'
@@ -76,7 +77,7 @@ export function MapScreen({
   const [geocoding, setGeocoding] = useState(false)
   const [geoNote, setGeoNote] = useState<string | null>(null)
   const [techFilter, setTechFilter] = useState('')
-  const [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<string>>(new Set())
+  const [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<string>>(() => readHiddenTypes())
   const [driveLegs, setDriveLegs] = useState<DriveLeg[]>([])
   const [driveError, setDriveError] = useState<string | null>(null)
   const [driveFromCache, setDriveFromCache] = useState(false)
@@ -451,10 +452,14 @@ export function MapScreen({
                   const next = new Set(prev)
                   if (next.has(key)) next.delete(key)
                   else next.add(key)
+                  writeHiddenTypes(next)
                   return next
                 })
               }
-              onReset={() => setHiddenTypes(new Set())}
+              onReset={() => {
+                writeHiddenTypes(new Set())
+                setHiddenTypes(new Set())
+              }}
             />
           </div>
         ) : null}

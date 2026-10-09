@@ -42,6 +42,7 @@ export function CalendarScreen({
 }) {
   const [view, setView] = useState<CalView>('timegrid')
   const [jobs, setJobs] = useState<JobRow[]>([])
+  const [loaded, setLoaded] = useState(false)
   const dayTypes = useMemo(() => countJobTypes(jobs.filter((job) => !isCapacityBlock(job))), [jobs])
   const [error, setError] = useState<string | null>(null)
   const [persistError, setPersistError] = useState<string | null>(null)
@@ -62,6 +63,7 @@ export function CalendarScreen({
       .then((rows) => {
         if (cancelled) return
         setJobs(rows)
+        setLoaded(true)
         setError(null)
       })
       .catch((err: unknown) => {
@@ -171,6 +173,16 @@ export function CalendarScreen({
 
       {error ? <ErrorNote className="px-4 py-2 text-sm" error={error} /> : null}
       {persistError ? <ErrorNote className="px-4 py-1 text-sm" error={persistError} /> : null}
+
+      {loaded && !error && jobs.length === 0 ? (
+        <div className="border-b border-line px-4 py-4" data-testid="calendar-empty">
+          <h2 className="text-base font-semibold text-ink">Nothing scheduled yet</h2>
+          <p className="mt-1 max-w-prose text-sm text-ink-body">Jobs appear here by technician and time once you bring in an ADD export.</p>
+          <a href="#/import" className="mt-3 inline-flex rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover">
+            Go to import
+          </a>
+        </div>
+      ) : null}
 
       {emptyHere && sampleDate ? (
         <div className="border-b border-line px-4 py-2">

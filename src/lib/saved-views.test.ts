@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { MAX_VIEWS, parseViews, removeView, upsertView, type SheetView } from './saved-views.ts'
+import { MAX_VIEWS, parseHiddenTypes, parseViews, removeView, upsertView, type SheetView } from './saved-views.ts'
 
 const v = (name: string, extra: Partial<SheetView> = {}): SheetView => ({ name, limitToDate: true, includeCapacity: false, technician: '', zone: '', ...extra })
 
@@ -19,4 +19,7 @@ assert.equal(views.length, MAX_VIEWS)
 assert.equal(views.at(-1)!.name, `V${MAX_VIEWS + 2}`)
 assert.equal(removeView(views, 'V5').length, MAX_VIEWS - 1)
 assert.equal(upsertView(views, v('   ')).length, MAX_VIEWS)
+assert.deepEqual([...parseHiddenTypes('["tank",3,"lock"]')], ['tank', 'lock'])
+assert.equal(parseHiddenTypes('oops').size, 0)
+assert.equal(parseHiddenTypes(null).size, 0)
 console.log('saved-views.test.ts: ok')

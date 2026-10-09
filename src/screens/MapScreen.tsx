@@ -14,7 +14,7 @@ import { checkLocalDriveTimes, geocodeLocalJobs, queryBacklog, queryJobs } from 
 import { driveTimeEligibility, type DriveLeg } from '../lib/drive-times.ts'
 import { todayInNewYork } from '../lib/format.ts'
 import { jobPinColor, mapScheduleSignal, mapScheduleStroke } from '../lib/colors.ts'
-import { JobTypeChips, countJobTypes, jobTypeKey } from '../components/JobTypeChips.tsx'
+import { JobTypeChips, countJobTypes, jobTypeKey, type JobTypeCount } from '../components/JobTypeChips.tsx'
 import { glyphToneFor, jobIcon } from '../lib/job-icons.ts'
 import { glyphId } from '../lib/pin-glyphs.ts'
 import { readHiddenTypes, writeHiddenTypes } from '../lib/saved-views.ts'
@@ -394,6 +394,21 @@ export function MapScreen({
           onTech={setTechFilter}
           onAllDates={setAllDates}
           onBacklog={setShowBacklog}
+          types={typeCounts}
+          hiddenTypes={hiddenTypes}
+          onToggleType={(key) =>
+            setHiddenTypes((prev) => {
+              const next = new Set(prev)
+              if (next.has(key)) next.delete(key)
+              else next.add(key)
+              writeHiddenTypes(next)
+              return next
+            })
+          }
+          onResetTypes={() => {
+            writeHiddenTypes(new Set())
+            setHiddenTypes(new Set())
+          }}
         />
         <NearbySearch
           allowed={allowed}
@@ -444,29 +459,8 @@ export function MapScreen({
             </button>
           </div>
         ) : null}
-        {typeCounts.length > 1 ? (
-          <div className="border-b border-line bg-white px-chrome py-1.5">
-            <JobTypeChips
-              types={typeCounts}
-              hidden={hiddenTypes}
-              onToggle={(key) =>
-                setHiddenTypes((prev) => {
-                  const next = new Set(prev)
-                  if (next.has(key)) next.delete(key)
-                  else next.add(key)
-                  writeHiddenTypes(next)
-                  return next
-                })
-              }
-              onReset={() => {
-                writeHiddenTypes(new Set())
-                setHiddenTypes(new Set())
-              }}
-            />
-          </div>
-        ) : null}
         <div
-          className={`pointer-events-none absolute right-3 z-10 flex ${typeCounts.length > 1 ? 'top-14' : 'top-3'} max-w-[min(36rem,calc(100%-1.5rem))] flex-col items-end gap-2`}
+          className={`pointer-events-none absolute right-3 z-10 flex top-3 max-w-[min(36rem,calc(100%-1.5rem))] flex-col items-end gap-2`}
           data-testid="map-overlay-tools"
         >
           <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-lg border border-slate-200 bg-white/95 px-2 py-1 shadow-sm">
@@ -707,7 +701,15 @@ function MapFilters({
   onTech,
   onAllDates,
   onBacklog,
+  types,
+  hiddenTypes,
+  onToggleType,
+  onResetTypes,
 }: {
+  types: JobTypeCount[]
+  hiddenTypes: ReadonlySet<string>
+  onToggleType: (key: string) => void
+  onResetTypes: () => void
   techFilter: string
   techOptions: string[]
   allDates: boolean
@@ -719,7 +721,7 @@ function MapFilters({
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
-  const active = (techFilter ? 1 : 0) + (allDates ? 1 : 0) + (showBacklog ? 0 : 1)
+  const active = (techFilter ? 1 : 0) + (allDates ? 1 : 0) + (showBacklog ? 0 : 1) + (hiddenTypes.size ? 1 : 0)
 
   useEffect(() => {
     if (!open) return
@@ -753,7 +755,7 @@ function MapFilters({
         <div
           role="dialog"
           aria-labelledby={titleId}
-          className="absolute left-0 top-full z-40 mt-1 w-60 space-y-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+          className="absolute right-0 top-full z-40 mt-1 max-h-[70vh] w-80 max-w-[calc(100vw-1.5rem)] overflow-auto space-y-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
         >
           <p id={titleId} className="text-sm font-medium text-slate-600">
             Map filters
@@ -782,6 +784,12 @@ function MapFilters({
             <input type="checkbox" checked={showBacklog} onChange={(event) => onBacklog(event.target.checked)} />
             Open backlog
           </label>
+          {types.length > 1 ? (
+            <div>
+              <p className="mb-1 text-xs text-slate-600">Job types</p>
+              <JobTypeChips types={types} hidden={hiddenTypes} onToggle={onToggleType} onReset={onResetTypes} />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

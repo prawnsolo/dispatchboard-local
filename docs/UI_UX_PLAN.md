@@ -89,7 +89,7 @@ Confirmed by Pilot: in the real export a fireplace or gas log cleaning is logged
 - U4 Inter or Geist with tabular numbers for times, WO numbers and counts. **Done.** Inter Variable, tabular numbers on times, dates and numeric inputs.
 - U5 One icon set across the app. Now covered by section 2. **Done.** Lucide bodies plus five custom glyphs, one resolver.
 - U6 Soft borders, one shadow level, consistent radii. **Done.** One shadow, 0.5rem radius, flat capacity blocks.
-- U7 Real empty states with one clear next action. **Partly done.** Jobs, Today, Backlog and Sheet have a next action; Planning and Calendar still show a bare message.
+- U7 Real empty states with one clear next action. **Done.** Jobs, Today, Backlog, Sheet, Calendar and Planning say what the screen is for and what to do next.
 - U8 Plain-language errors with a Details toggle for the technical text. **Done.** Plain sentence first, technical text under Details.
 - U9 Status colors with a legend. Now covered by the Map toolbar chips in section 2. **Done.** Job-type chips double as legend (Calendar) and filter (Map).
 - U10 (new) Replace the side-tab card border and the stripes, per section 1. **Done.** Side-tab border and stripes removed.
@@ -117,7 +117,7 @@ Confirmed by Pilot: in the real export a fireplace or gas log cleaning is logged
 - F5 Overbook warnings on the calendar. **Done.** Double-booked problem: overlapping times for one tech, or a job on a PTO or holiday day.
 - F6 Saved filters. **Done for the Sheet (tech, zone, date limit, capacity).** Map type filter is not saved.
 - F7 Bulk edit in the Sheet. **Done.** Pick rows, set tech, date, zone, times or note.
-- F8 Drag from Backlog onto the calendar. **Open, blocked.** Backlog promotion needs job creation, which is switched off (VITE_ENABLE_JOB_CREATE). Decide that first.
+- F8 Drag from Backlog onto the calendar. **Dropped.** Local does not create or rearrange jobs for now, so there is nothing to drag. Leave `VITE_ENABLE_JOB_CREATE` off.
 - F9 CSV export of any view. **Done for Jobs, Backlog and Sheet.** CSV cells starting with = or @ are quoted as text.
 - F10 Job edit history. **Done.** Local job_history table (schema 6), last 50 edits per job, shown in the job drawer. Imports are not logged.
 

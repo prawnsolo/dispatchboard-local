@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
 import { recordsFromBytes, summarize, SUPPORTED_COLUMNS, type ParsedRow } from '../lib/add.ts'
-import { applyRows, databasePath, geocodeLocalJobs, queryCounts, WIPE_LOCAL_CONFIRM, wipeLocalDatabase } from '../lib/db.ts'
+import { applyRows, databasePath, geocodeLocalJobs, previewImportDiff, queryCounts, WIPE_LOCAL_CONFIRM, wipeLocalDatabase } from '../lib/db.ts'
 import { formatDate, formatLocalTimestamp, formatTimeRange } from '../lib/format.ts'
 import { readLastApply, writeLastApply, type LastApplyRecord } from '../lib/last-apply.ts'
 import { ALLOW_NETWORK_GEOCODING_CONFIRM, useAllowNetworkGeocoding } from '../lib/prefs.ts'
 import type { LocalGeocodeSummary } from '../lib/geocode-db.ts'
 import type { ApplyStats } from '../lib/store.ts'
+import { GoogleFixDialog } from '../components/GoogleFixDialog.tsx'
+import { ErrorNote } from '../components/ErrorNote.tsx'
+import { describeChange, type ImportDiff } from '../lib/import-diff.ts'
 
 const MAX_IMPORT_BYTES = 5 * 1024 * 1024
 
@@ -13,6 +16,59 @@ type Preview = {
   fileName: string
   rows: ParsedRow[]
   summary: ReturnType<typeof summarize>
+  diff: ImportDiff | null
+}
+
+function DiffBlock({ diff, updateMatched }: { diff: ImportDiff; updateMatched: boolean }) {
+  const rows: Array<{ key: string; n: number; label: string; tone: string }> = [
+    { key: 'added', n: diff.added.length, label: 'new', tone: 'text-success' },
+    { key: 'changed', n: diff.changed.length, label: updateMatched ? 'changed' : 'changed (skipped, update is off)', tone: 'text-ink' },
+    { key: 'unchanged', n: diff.unchanged, label: 'same as now', tone: 'text-ink-body' },
+    { key: 'missing', n: diff.missing.length, label: 'on the board but not in this file', tone: diff.missing.length ? 'text-error' : 'text-ink-body' },
+  ]
+  return (
+    <div className="mt-4 rounded-md border border-line p-4" data-testid="import-diff">
+      <h3 className="text-sm font-semibold text-ink">What will change</h3>
+      <p className="mt-1 text-sm text-ink-body">
+        {rows.map((r, i) => (
+          <span key={r.key}>
+            {i ? ' · ' : ''}
+            <span className={`font-semibold ${r.tone}`}>{r.n}</span> {r.label}
+          </span>
+        ))}
+      </p>
+      {diff.changed.length ? (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm font-medium text-ink underline underline-offset-2">Show changed jobs</summary>
+          <ul className="mt-2 max-h-64 space-y-2 overflow-auto text-sm">
+            {diff.changed.map((c) => (
+              <li key={c.ref}>
+                <span className="font-medium text-ink">{c.ref}</span> <span className="text-ink-body">{c.customer}</span>
+                <ul className="ml-4 list-disc text-ink-body">
+                  {c.changes.map((ch) => (
+                    <li key={ch.label}>{describeChange(ch)}</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+      {diff.missing.length ? (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm font-medium text-ink underline underline-offset-2">Show jobs missing from the file</summary>
+          <p className="mt-1 text-meta text-ink-body">Apply never deletes. If these were cancelled, remove them on the Jobs screen.</p>
+          <ul className="mt-1 max-h-48 space-y-1 overflow-auto text-sm text-ink-body">
+            {diff.missing.map((m) => (
+              <li key={m.ref}>
+                <span className="font-medium text-ink">{m.ref}</span> {m.customer}{m.date ? `, ${formatDate(m.date)}` : ''}
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </div>
+  )
 }
 
 function GeocodeCounts({ summary, skipped }: { summary: LocalGeocodeSummary | null; skipped: boolean }) {
@@ -88,6 +144,7 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
   const [geocodeAfter, setGeocodeAfter] = useState(true)
   const [geoSummary, setGeoSummary] = useState<LocalGeocodeSummary | null>(null)
   const [geoSkipped, setGeoSkipped] = useState(false)
+  const [fix, setFix] = useState<{ ids: number[]; googleErrors: number } | null>(null)
 
   async function refreshMeta() {
     try {
@@ -125,7 +182,13 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
     try {
       const bytes = await file.arrayBuffer()
       const rows = recordsFromBytes(bytes)
-      setPreview({ fileName: file.name, rows, summary: summarize(rows) })
+      let diff: ImportDiff | null = null
+      try {
+        diff = await previewImportDiff(rows)
+      } catch {
+        diff = null
+      }
+      setPreview({ fileName: file.name, rows, summary: summarize(rows), diff })
     } catch (error) {
       setPreview(null)
       setParseError(error instanceof Error ? error.message : String(error))
@@ -156,6 +219,7 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
           const summary = await geocodeLocalJobs(result.writtenIds, { allowNetwork: true })
           setGeoSummary(summary)
           setGeoSkipped(false)
+          if (summary.unmapped_ids.length > 0) setFix({ ids: summary.unmapped_ids, googleErrors: summary.google_errors })
         } catch (error) {
           setGeoSkipped(true)
           setApplyError(
@@ -224,7 +288,7 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
           />
         </label>
         {preview ? <p className="mt-3 text-sm text-ink">{preview.fileName}</p> : null}
-        {parseError ? <p className="mt-3 text-sm text-error">{parseError}</p> : null}
+        {parseError ? <ErrorNote className="mt-3 text-sm" error={parseError} /> : null}
       </section>
 
       {preview ? (
@@ -238,6 +302,7 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
             <span className="font-semibold">{preview.summary.capacity}</span> capacity blocks
             {preview.summary.dates.length ? ` · ${preview.summary.dates.length} dates` : ''}
           </p>
+          {preview.diff ? <DiffBlock diff={preview.diff} updateMatched={updateMatched} /> : null}
           <label className="mt-4 flex items-start gap-3 text-sm text-ink-body">
             <input
               type="checkbox"
@@ -274,15 +339,25 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
             >
               {applying ? (geocodeAfter ? 'Writing and geocoding…' : 'Writing…') : 'Apply to local database'}
             </button>
-            <a href="#/jobs" className="rounded-md border border-brand px-6 py-3 text-[15px] font-semibold text-brand hover:bg-brand-wash">
+            <a href="#/jobs" className="rounded-md border border-slate-300 px-6 py-3 text-[15px] font-semibold text-slate-900 hover:bg-slate-50">
               Open jobs
             </a>
           </div>
-          {applyError ? <p className="mt-3 text-sm text-error">{applyError}</p> : null}
+          {applyError ? <ErrorNote className="mt-3 text-sm" error={applyError} /> : null}
           {stats && lastApply ? (
             <>
               <ApplyCounts record={{ ...lastApply, ...stats }} />
               <GeocodeCounts summary={geoSummary} skipped={geoSkipped} />
+              {geoSummary && geoSummary.unmapped_ids.length > 0 && !fix ? (
+                <button
+                  type="button"
+                  data-testid="google-fix-reopen"
+                  onClick={() => setFix({ ids: geoSummary.unmapped_ids, googleErrors: geoSummary.google_errors })}
+                  className="mt-2 text-sm font-medium text-ink underline underline-offset-2"
+                >
+                  {geoSummary.unmapped_ids.length} {geoSummary.unmapped_ids.length === 1 ? 'address' : 'addresses'} not found. Use Google to fix
+                </button>
+              ) : null}
               <p className="mt-2 text-xs text-ink-label">
                 New rows were inserted. Updated rows matched a work order or capacity key and were overwritten.
                 Unchanged rows matched and were left as stored. A mismatch rule match sets ≠ on the job. It does not
@@ -365,6 +440,19 @@ export function ImportScreen({ onApplied, revision }: { onApplied: () => void; r
           Wipe local database
         </button>
       </section>
+      {fix ? (
+        <GoogleFixDialog
+          ids={fix.ids}
+          googleErrors={fix.googleErrors}
+          alreadyTried
+          onClose={() => setFix(null)}
+          onChanged={(left) => {
+            setGeoSummary((prev) => (prev ? { ...prev, unmapped_ids: left } : prev))
+            onApplied()
+            void refreshMeta()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

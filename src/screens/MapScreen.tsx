@@ -6,13 +6,19 @@ import { LocalMap, type MapPinBacklog, type MapPinJob } from '../components/Loca
 import { MapChromePortal } from '../components/MapChromeSlot.tsx'
 import { NearbyResult, NearbySearch } from '../components/NearbySearch.tsx'
 import { ScheduleHereDialog } from '../components/ScheduleHereDialog.tsx'
+import { JobIcon } from '../components/JobIcon.tsx'
+import { JobSummary } from '../components/JobSummary.tsx'
 import { UnmappedFix } from '../components/UnmappedFix.tsx'
 import { BACKLOG_TYPE_LABELS } from '../lib/backlog.ts'
 import { checkLocalDriveTimes, geocodeLocalJobs, queryBacklog, queryJobs } from '../lib/db.ts'
 import { driveTimeEligibility, type DriveLeg } from '../lib/drive-times.ts'
 import { todayInNewYork } from '../lib/format.ts'
 import { jobPinColor, mapScheduleSignal, mapScheduleStroke } from '../lib/colors.ts'
-import { asCoord, jobHasMappedPin } from '../lib/geocode.ts'
+import { JobTypeChips, countJobTypes, jobTypeKey, type JobTypeCount } from '../components/JobTypeChips.tsx'
+import { glyphToneFor, jobIcon } from '../lib/job-icons.ts'
+import { glyphId } from '../lib/pin-glyphs.ts'
+import { readHiddenTypes, writeHiddenTypes } from '../lib/saved-views.ts'
+import { asCoord, jobHasMappedPin, pinConfidence } from '../lib/geocode.ts'
 import { readGoogleMapsApiKey, useHasGoogleMapsApiKey } from '../lib/google-key.ts'
 import { ALLOW_NETWORK_GEOCODING_CONFIRM, isMapTechVisible, useAllowNetworkGeocoding, useMapHiddenTechs } from '../lib/prefs.ts'
 import { BOOTS_CHIP_LABEL, bootsFlagsForJobs } from '../lib/boots.ts'
@@ -24,6 +30,7 @@ import { isCapacityBlock, techKey, uniqueTechs } from '../lib/schedule.ts'
 import { blankJobDraft, type JobRow } from '../lib/store.ts'
 import type { BacklogItem } from '../lib/backlog.ts'
 import { YARD } from '../lib/yard.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 function addressLine(job: JobRow): string {
   return [job.address_street, job.address_city_state_zip].filter(Boolean).join(', ') || job.address_raw || 'No address'
@@ -67,18 +74,17 @@ export function MapScreen({
   const [fixId, setFixId] = useState<number | null>(null)
   const [pinDrop, setPinDrop] = useState(false)
   const [dropped, setDropped] = useState<{ lat: number; lng: number } | null>(null)
-  const [promptOpen, setPromptOpen] = useState(false)
   const [radiusMinutes, setRadiusMinutes] = useState(30)
   const [center, setCenter] = useState<ProximityCenter | null>(null)
   const [geocoding, setGeocoding] = useState(false)
   const [geoNote, setGeoNote] = useState<string | null>(null)
   const [techFilter, setTechFilter] = useState('')
+  const [hiddenTypes, setHiddenTypes] = useState<ReadonlySet<string>>(() => readHiddenTypes())
   const [driveLegs, setDriveLegs] = useState<DriveLeg[]>([])
   const [driveError, setDriveError] = useState<string | null>(null)
   const [driveFromCache, setDriveFromCache] = useState(false)
   const [driveChecking, setDriveChecking] = useState(false)
   const googleKey = useHasGoogleMapsApiKey()
-  const promptedRef = useRef(false)
 
   useEffect(() => {
     if (!pinDrop) return
@@ -93,12 +99,6 @@ export function MapScreen({
     setTrackedDate(date)
     setAllDates(false)
   }
-
-  useEffect(() => {
-    if (!active || allowed || promptedRef.current) return
-    promptedRef.current = true
-    setPromptOpen(true)
-  }, [active, allowed])
 
   useEffect(() => {
     if (!active) return
@@ -158,7 +158,14 @@ export function MapScreen({
     const byVis = dayJobs.filter((job) => isMapTechVisible(techKey(job.technician_name), hiddenTechs))
     return techFilter ? byVis.filter((job) => techKey(job.technician_name) === techFilter) : byVis
   }, [dayJobs, techFilter, hiddenTechs])
-  const unmapped = useMemo(() => visible.filter((job) => !jobHasMappedPin(job)), [visible])
+  const typeCounts = useMemo(() => countJobTypes(visible), [visible])
+  const shown = useMemo(
+    () => (hiddenTypes.size ? visible.filter((job) => !hiddenTypes.has(jobTypeKey(job))) : visible),
+    [visible, hiddenTypes],
+  )
+  const unmapped = useMemo(() => shown.filter((job) => !jobHasMappedPin(job)), [shown])
+  // Pins from the loosest source (street level only). Worth a look before sending a tech.
+  const toCheck = useMemo(() => shown.filter((job) => jobHasMappedPin(job) && pinConfidence(job.geocode_source).level === 'check'), [shown])
   const radiusMiles = minutesToMiles(radiusMinutes)
   const distances = useMemo(
     () => (center ? nearbyJobDistances(visible, center, radiusMiles) : null),
@@ -167,7 +174,7 @@ export function MapScreen({
 
   const pins: MapPinJob[] = useMemo(() => {
     const out: MapPinJob[] = []
-    for (const job of visible) {
+    for (const job of shown) {
       const lat = asCoord(job.lat)
       const lng = asCoord(job.lng)
       if (lat == null || lng == null || !jobHasMappedPin(job)) continue
@@ -179,6 +186,7 @@ export function MapScreen({
         lng,
         nearby: distances ? distances.has(String(job.id)) : false,
         color: jobPinColor(job),
+        glyph: glyphId(jobIcon(job).icon, glyphToneFor(jobPinColor(job))),
         stroke: mapScheduleStroke(job),
         schedule,
         flag: Number(job.checklist_open) > 0,
@@ -195,7 +203,7 @@ export function MapScreen({
       })
     }
     return out
-  }, [distances, visible])
+  }, [distances, shown])
 
   const bootsFlags = useMemo(() => bootsFlagsForJobs(allJobs), [allJobs])
 
@@ -325,7 +333,6 @@ export function MapScreen({
 
   function allow() {
     setAllowed(true)
-    setPromptOpen(false)
   }
 
   function confirmAllow(): boolean {
@@ -387,6 +394,21 @@ export function MapScreen({
           onTech={setTechFilter}
           onAllDates={setAllDates}
           onBacklog={setShowBacklog}
+          types={typeCounts}
+          hiddenTypes={hiddenTypes}
+          onToggleType={(key) =>
+            setHiddenTypes((prev) => {
+              const next = new Set(prev)
+              if (next.has(key)) next.delete(key)
+              else next.add(key)
+              writeHiddenTypes(next)
+              return next
+            })
+          }
+          onResetTypes={() => {
+            writeHiddenTypes(new Set())
+            setHiddenTypes(new Set())
+          }}
         />
         <NearbySearch
           allowed={allowed}
@@ -431,14 +453,14 @@ export function MapScreen({
             <button
               type="button"
               onClick={() => setPinDrop(false)}
-              className="font-semibold text-brand"
+              className="font-semibold text-slate-900 underline underline-offset-2"
             >
               Cancel drop
             </button>
           </div>
         ) : null}
         <div
-          className="pointer-events-none absolute right-3 top-3 z-10 flex max-w-[min(36rem,calc(100%-1.5rem))] flex-col items-end gap-2"
+          className={`pointer-events-none absolute right-3 z-10 flex top-3 max-w-[min(36rem,calc(100%-1.5rem))] flex-col items-end gap-2`}
           data-testid="map-overlay-tools"
         >
           <div className="pointer-events-auto flex flex-wrap items-center justify-end gap-2 rounded-lg border border-slate-200 bg-white/95 px-2 py-1 shadow-sm">
@@ -474,12 +496,12 @@ export function MapScreen({
             <NearbyResult center={center} radiusMinutes={radiusMinutes} matchCount={distances?.size ?? 0} />
           ) : null}
           {geoNote ? <p className="pointer-events-auto rounded-lg border border-slate-200 bg-white/95 px-2 py-1 text-xs text-slate-700 shadow-sm">{geoNote}</p> : null}
-          {error ? <p className="pointer-events-auto text-sm text-error">{error}</p> : null}
+          {error ? <ErrorNote className="pointer-events-auto text-sm" error={error} /> : null}
         </div>
 
         <div className="absolute bottom-3 left-3 z-10 w-[min(20rem,calc(100%-1.5rem))] space-y-2">
           <div className="max-h-40 overflow-y-auto rounded-md border border-slate-200 bg-white/95 shadow-sm">
-            <p className="border-b border-slate-200 px-2 py-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+            <p className="border-b border-slate-200 px-2 py-1 text-sm font-medium text-slate-600">
               Unmapped ({unmapped.length})
             </p>
             {unmapped.length === 0 ? (
@@ -499,12 +521,16 @@ export function MapScreen({
               <ul>
                 {unmapped.map((job) => (
                   <li key={job.id} className="flex items-center justify-between gap-2 border-b border-slate-100 py-0.5 pl-2 pr-1 last:border-b-0">
-                    <div className="min-w-0">
-                      <p className="flex items-center gap-1.5 truncate text-xs font-medium text-slate-900">
-                        <span className="truncate">{job.customer_name}</span>
-                        <JobMarks job={job} />
-                      </p>
-                      <p className="truncate text-xs text-slate-500">{addressLine(job)}</p>
+                    <div className="flex min-w-0 items-start gap-1.5">
+                      <JobIcon job={job} size={20} />
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-1.5 truncate text-xs font-medium text-slate-900">
+                          <span className="truncate">{job.customer_name}</span>
+                          <JobMarks job={job} />
+                        </p>
+                        <p className="truncate text-xs text-slate-600">{addressLine(job)}</p>
+                        <p className="truncate text-xs text-slate-500">{job.activity_1}</p>
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -513,7 +539,7 @@ export function MapScreen({
                         setDropped(null)
                         setPinDrop(false)
                       }}
-                      className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded px-2 text-xs font-semibold text-brand-700 hover:bg-brand-wash"
+                      className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded px-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
                     >
                       Fix
                     </button>
@@ -522,24 +548,57 @@ export function MapScreen({
               </ul>
               </>
             )}
+            {toCheck.length ? (
+              <div data-testid="pins-to-check">
+                <p className="border-y border-slate-200 px-2 py-1 text-sm font-medium text-slate-600">
+                  Check these pins ({toCheck.length})
+                </p>
+                <ul>
+                  {toCheck.map((job) => (
+                    <li key={job.id} className="flex items-center justify-between gap-2 border-b border-slate-100 py-0.5 pl-2 pr-1 last:border-b-0">
+                      <div className="flex min-w-0 items-start gap-1.5">
+                        <JobIcon job={job} size={20} />
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-medium text-slate-900">{job.customer_name}</p>
+                          <p className="truncate text-xs text-slate-600">{addressLine(job)}</p>
+                          <p className="truncate text-xs text-slate-500">
+                            {job.activity_1} · {pinConfidence(job.geocode_source).label}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFixId(job.id)
+                          setDropped(null)
+                          setPinDrop(false)
+                        }}
+                        className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded px-2 text-xs font-semibold text-slate-900 hover:bg-slate-100"
+                      >
+                        Review
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
           {selected ? (
-            <div className="rounded-md border border-slate-200 bg-white/95 p-2 text-xs shadow-sm">
-              <p className="flex flex-wrap items-center gap-1.5 font-semibold text-slate-900">
-                <span className="min-w-0 truncate">{selected.customer_name}</span>
+            <div className="rounded-md border border-slate-200 bg-white/95 p-2 text-xs shadow-sm" data-testid="map-selected-card">
+              <JobSummary job={selected} compact />
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <JobMarks job={selected} />
-              </p>
-              {bootsFlags.has(String(selected.id)) ? (
-                <span
-                  className="mt-1 inline-flex items-center rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[12px] font-semibold text-amber-900"
-                  data-testid="boots-chip"
-                >
-                  {BOOTS_CHIP_LABEL}
-                </span>
-              ) : null}
-              <p className="mt-0.5 text-slate-600">{addressLine(selected)}</p>
-              <p className="mt-0.5 text-slate-500">
-                {selected.geocode_source ?? 'none'}
+                {bootsFlags.has(String(selected.id)) ? (
+                  <span
+                    className="inline-flex items-center rounded-sm border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[12px] font-semibold text-amber-900"
+                    data-testid="boots-chip"
+                  >
+                    {BOOTS_CHIP_LABEL}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1 text-slate-500">
+                {pinConfidence(selected.geocode_source).label}
                 {selected.lat != null && selected.lng != null ? ` · ${selected.lat}, ${selected.lng}` : ''}
               </p>
               {!jobHasMappedPin(selected) ? (
@@ -549,7 +608,7 @@ export function MapScreen({
                     setFixId(selected.id)
                     setDropped(null)
                   }}
-                  className="mt-1 font-semibold text-brand-600"
+                  className="mt-1 font-semibold text-slate-900 underline underline-offset-2"
                 >
                   Fix unmapped
                 </button>
@@ -558,7 +617,7 @@ export function MapScreen({
           ) : null}
           {selectedBacklog ? (
             <div className="rounded-md border border-slate-200 bg-white/95 p-2 text-xs shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Backlog</p>
+              <p className="text-sm font-medium text-slate-600">Backlog</p>
               <p className="mt-0.5 font-semibold text-slate-900">
                 {selectedBacklog.customer_name?.trim() || BACKLOG_TYPE_LABELS[selectedBacklog.backlog_type]}
               </p>
@@ -568,7 +627,7 @@ export function MapScreen({
                   ? ` · ${selectedBacklog.address_street || selectedBacklog.address_raw}`
                   : ''}
               </p>
-              <a href="#/backlog" className="mt-1 inline-block font-semibold text-brand-600">
+              <a href="#/backlog" className="mt-1 inline-block font-semibold text-slate-900 underline underline-offset-2">
                 Open backlog
               </a>
             </div>
@@ -601,47 +660,6 @@ export function MapScreen({
           }}
         />
       </div>
-
-      {promptOpen ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="map-network-title"
-            className="w-full max-w-md rounded-lg bg-white p-5 shadow-card"
-          >
-            <h2 id="map-network-title" className="text-lg font-semibold">
-              Allow network geocoding?
-            </h2>
-            <p className="mt-2 text-sm text-ink-body">
-              The map can already show pins stored on this PC and the Fredericksburg yard. Map tiles load from
-              OpenFreeMap when this tab is open.
-            </p>
-            <p className="mt-2 text-sm text-ink-body">
-              Census geocoding stays off until you allow it. Allowing it sends street addresses to the public US Census
-              Bureau geocoder. Nearby may also call OpenStreetMap Nominatim. If a Google Maps API key is saved in
-              Settings, an address Census cannot match or cannot reach (and that has no site pin) is also sent to Google.
-              With no key, Google is not called.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={allow}
-                className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover"
-              >
-                Allow network geocoding
-              </button>
-              <button
-                type="button"
-                onClick={() => setPromptOpen(false)}
-                className="rounded-md px-4 py-2 text-sm font-semibold text-ink-body hover:text-ink"
-              >
-                Not now
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
 
       {fixJob && !pinDrop ? (
         <UnmappedFix
@@ -683,7 +701,15 @@ function MapFilters({
   onTech,
   onAllDates,
   onBacklog,
+  types,
+  hiddenTypes,
+  onToggleType,
+  onResetTypes,
 }: {
+  types: JobTypeCount[]
+  hiddenTypes: ReadonlySet<string>
+  onToggleType: (key: string) => void
+  onResetTypes: () => void
   techFilter: string
   techOptions: string[]
   allDates: boolean
@@ -695,7 +721,7 @@ function MapFilters({
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
-  const active = (techFilter ? 1 : 0) + (allDates ? 1 : 0) + (showBacklog ? 0 : 1)
+  const active = (techFilter ? 1 : 0) + (allDates ? 1 : 0) + (showBacklog ? 0 : 1) + (hiddenTypes.size ? 1 : 0)
 
   useEffect(() => {
     if (!open) return
@@ -729,9 +755,9 @@ function MapFilters({
         <div
           role="dialog"
           aria-labelledby={titleId}
-          className="absolute left-0 top-full z-40 mt-1 w-60 space-y-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
+          className="absolute right-0 top-full z-40 mt-1 max-h-[70vh] w-80 max-w-[calc(100vw-1.5rem)] overflow-auto space-y-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm"
         >
-          <p id={titleId} className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p id={titleId} className="text-sm font-medium text-slate-600">
             Map filters
           </p>
           <label className="block text-xs text-slate-600">
@@ -758,6 +784,12 @@ function MapFilters({
             <input type="checkbox" checked={showBacklog} onChange={(event) => onBacklog(event.target.checked)} />
             Open backlog
           </label>
+          {types.length > 1 ? (
+            <div>
+              <p className="mb-1 text-xs text-slate-600">Job types</p>
+              <JobTypeChips types={types} hidden={hiddenTypes} onToggle={onToggleType} onReset={onResetTypes} />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </div>

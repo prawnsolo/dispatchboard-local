@@ -15,18 +15,16 @@ import {
   type SheetSort,
 } from '../lib/sheet.ts'
 import type { JobRow } from '../lib/store.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
+import { downloadText } from '../lib/csv.ts'
+import { BULK_FIELDS, bulkColumn, planBulk } from '../lib/bulk-edit.ts'
+import { readSheetViews, removeView, upsertView, writeSheetViews, type SheetView } from '../lib/saved-views.ts'
 
 const cellInput =
   'h-8 w-full min-w-0 border-0 bg-transparent px-1.5 text-cell text-slate-900 outline-none focus:bg-white focus:ring-1 focus:ring-slate-400 disabled:text-slate-500'
 
 function downloadCsv(csv: string) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = 'dispatchboard-local-sheet.csv'
-  anchor.click()
-  URL.revokeObjectURL(url)
+  downloadText('dispatchboard-local-sheet.csv', csv)
 }
 
 function SheetCell({
@@ -124,6 +122,14 @@ export function SheetScreen({
   const [includeCapacity, setIncludeCapacity] = useState(false)
   const [technician, setTechnician] = useState('')
   const [zone, setZone] = useState('')
+  const [views, setViews] = useState<SheetView[]>(() => readSheetViews())
+  const [viewName, setViewName] = useState<string | null>(null)
+  const [activeView, setActiveView] = useState('')
+  const [picked, setPicked] = useState<Set<number>>(() => new Set())
+  const [bulkKey, setBulkKey] = useState<(typeof BULK_FIELDS)[number]>('technician_name')
+  const [bulkValue, setBulkValue] = useState('')
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkNote, setBulkNote] = useState<string | null>(null)
   const [jobs, setJobs] = useState<JobRow[]>([])
   const [sort, setSort] = useState<SheetSort | null>(null)
   const [loading, setLoading] = useState(true)
@@ -167,6 +173,51 @@ export function SheetScreen({
       ),
     [includeCapacity, jobs, problemFilter, sort, technician, zone],
   )
+
+  // Only rows still on screen stay picked.
+  const pickedShown = useMemo(() => new Set(rows.filter((r) => picked.has(r.id)).map((r) => r.id)), [picked, rows])
+
+  function togglePick(id: number) {
+    setPicked((cur) => {
+      const next = new Set(cur)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  async function applyBulk() {
+    const plan = planBulk(rows, pickedShown, bulkKey, bulkValue)
+    if (!plan.ok) {
+      setError(plan.error)
+      setBulkNote(null)
+      return
+    }
+    setBulkBusy(true)
+    setError(null)
+    setBulkNote(null)
+    let done = 0
+    const failed: string[] = []
+    for (const id of plan.ids) {
+      try {
+        await patchLocalSheetCell(id, plan.patch)
+        done++
+      } catch (err) {
+        failed.push(err instanceof Error ? err.message : String(err))
+      }
+    }
+    setBulkBusy(false)
+    setBulkNote(
+      `Changed ${done} ${done === 1 ? 'row' : 'rows'}.` +
+        (plan.skipped ? ` ${plan.skipped} skipped (field not editable there).` : '') +
+        (failed.length ? ` ${failed.length} failed: ${failed[0]}` : ''),
+    )
+    if (!failed.length) {
+      setPicked(new Set())
+      setBulkValue('')
+    }
+    onChanged()
+  }
 
   async function commit(job: JobRow, column: SheetColumn, raw: string) {
     const parsed = parseSheetCell(column, raw)
@@ -238,6 +289,88 @@ export function SheetScreen({
             ))}
           </select>
         </label>
+        <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
+          View
+          <select
+            value={activeView}
+            data-testid="sheet-views"
+            onChange={(event) => {
+              const name = event.target.value
+              setActiveView(name)
+              const v = views.find((x) => x.name === name)
+              if (!v) return
+              setLimitToDate(v.limitToDate)
+              setIncludeCapacity(v.includeCapacity)
+              setTechnician(v.technician)
+              setZone(v.zone)
+            }}
+            className="rounded border border-slate-300 bg-white px-2 py-1 text-sm font-normal text-slate-900"
+          >
+            <option value="">Saved views</option>
+            {views.map((v) => (
+              <option key={v.name} value={v.name}>
+                {v.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {viewName == null ? (
+          <>
+            <button
+              type="button"
+              onClick={() => setViewName(activeView)}
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-sm font-medium text-slate-900 hover:bg-slate-50"
+            >
+              Save view
+            </button>
+            {activeView ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const next = removeView(views, activeView)
+                  setViews(next)
+                  writeSheetViews(next)
+                  setActiveView('')
+                }}
+                className="px-1.5 py-1 text-sm font-medium text-slate-600 underline underline-offset-2 hover:text-slate-900"
+              >
+                Delete view
+              </button>
+            ) : null}
+          </>
+        ) : (
+          <form
+            className="flex items-center gap-1"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const name = viewName.trim()
+              if (!name) return
+              const next = upsertView(views, { name, limitToDate, includeCapacity, technician, zone })
+              setViews(next)
+              writeSheetViews(next)
+              setActiveView(name)
+              setViewName(null)
+            }}
+          >
+            <input
+              autoFocus
+              value={viewName}
+              maxLength={40}
+              placeholder="Name this view"
+              onChange={(event) => setViewName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') setViewName(null)
+              }}
+              className="h-8 w-36 rounded border border-slate-300 bg-white px-2 text-sm text-slate-900"
+            />
+            <button type="submit" disabled={!viewName.trim()} className="rounded-lg bg-brand-600 px-2.5 py-1 text-sm font-medium text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500">
+              Save
+            </button>
+            <button type="button" onClick={() => setViewName(null)} className="px-1.5 py-1 text-sm font-medium text-slate-600 hover:text-slate-900">
+              Cancel
+            </button>
+          </form>
+        )}
         <button
           type="button"
           disabled={rows.length === 0}
@@ -247,19 +380,76 @@ export function SheetScreen({
           Download CSV
         </button>
       </div>
-      <p className="border-b border-slate-200 px-chrome py-1 text-meta text-slate-500">
-        Edit a cell and leave it to save. Jobs, Calendar, and Map use the same rows. Capacity blocks edit the label,
-        technician, date, times, and activity. Work order numbers stay as imported.
-      </p>
-      {error ? (
-        <p className="mt-2 text-sm text-error" role="alert">
-          {error}
+      <div className="border-b border-slate-200 px-chrome py-1">
+        <p className="max-w-prose text-meta text-slate-600">
+          Edit a cell and leave it to save. Jobs, Calendar, and Map use the same rows. Capacity blocks edit the label,
+          technician, date, times, and activity. Work order numbers stay as imported.
         </p>
+      </div>
+      {pickedShown.size > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-chrome py-1.5" data-testid="bulk-bar">
+          <span className="text-sm font-semibold text-slate-900">{pickedShown.size} picked</span>
+          <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
+            Set
+            <select
+              value={bulkKey}
+              onChange={(event) => setBulkKey(event.target.value as (typeof BULK_FIELDS)[number])}
+              className="rounded border border-slate-300 bg-white px-2 py-1 text-sm font-normal text-slate-900"
+            >
+              {BULK_FIELDS.map((key) => (
+                <option key={key} value={key}>
+                  {bulkColumn(key).label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
+            to
+            <input
+              value={bulkValue}
+              list="bulk-techs"
+              onChange={(event) => setBulkValue(event.target.value)}
+              placeholder={bulkKey === 'schedule_date' ? 'YYYY-MM-DD' : bulkKey.endsWith('_time') ? 'HH:MM' : 'value'}
+              className="h-8 w-40 rounded border border-slate-300 bg-white px-2 text-sm font-normal text-slate-900"
+            />
+          </label>
+          {bulkKey === 'technician_name' ? (
+            <datalist id="bulk-techs">
+              {techs.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          ) : null}
+          <button
+            type="button"
+            disabled={bulkBusy}
+            onClick={() => void applyBulk()}
+            className="rounded-lg bg-brand-600 px-3 py-1 text-sm font-medium text-white hover:bg-brand-700 disabled:bg-slate-200 disabled:text-slate-500"
+          >
+            {bulkBusy ? 'Applying…' : `Apply to ${pickedShown.size}`}
+          </button>
+          <button type="button" onClick={() => setPicked(new Set())} className="px-1.5 py-1 text-sm font-medium text-slate-600 hover:text-slate-900">
+            Clear
+          </button>
+          <p className="basis-full text-meta text-slate-600">Leaving the value empty clears the field. Each change is saved in the job&apos;s History.</p>
+        </div>
+      ) : null}
+      {bulkNote ? <p className="px-chrome py-1 text-sm text-slate-800" data-testid="bulk-note">{bulkNote}</p> : null}
+      {error ? (
+        <ErrorNote className="mt-2 text-sm" error={error} />
       ) : null}
       <div className="min-h-0 flex-1 overflow-auto bg-white">
         <table className="border-collapse text-left text-cell">
           <thead className="sticky top-0 z-10 bg-chrome text-white">
             <tr>
+              <th className="w-9 border-b border-slate-700 px-2 py-0 text-left">
+                <input
+                  type="checkbox"
+                  aria-label="Pick all rows"
+                  checked={rows.length > 0 && pickedShown.size === rows.length}
+                  onChange={(event) => setPicked(event.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
+                />
+              </th>
               {SHEET_COLUMNS.map((column) => {
                 const active = sort?.key === column.key
                 return (
@@ -284,6 +474,14 @@ export function SheetScreen({
           <tbody>
             {rows.map((job) => (
               <tr key={job.id} className="border-t border-slate-200 bg-white">
+                <td className="border-r border-slate-200 px-2 align-middle">
+                  <input
+                    type="checkbox"
+                    aria-label={`Pick ${job.customer_name}`}
+                    checked={pickedShown.has(job.id)}
+                    onChange={() => togglePick(job.id)}
+                  />
+                </td>
                 {SHEET_COLUMNS.map((column) => {
                   const editable = isSheetCellEditable(job, column)
                   return (

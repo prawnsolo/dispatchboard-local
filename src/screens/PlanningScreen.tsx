@@ -10,6 +10,7 @@ import {
 import type { MismatchRuleDraft } from '../lib/mismatch.ts'
 import type { TemplateDraft, TemplateDraftItem } from '../lib/templates.ts'
 import type { MismatchRuleRow, TemplateRow } from '../lib/store.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 const controlClass =
   'mt-1 w-full rounded-md border border-line bg-white px-3 py-2 text-sm normal-case tracking-normal text-ink outline-none focus:border-brand'
@@ -141,12 +142,12 @@ function MismatchSection({ revision }: { revision: number }) {
 
   return (
     <section className="rounded-lg border border-line p-4 shadow-card" data-testid="mismatch-rules">
-      <h3 className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Mismatch rules</h3>
+      <h3 className="text-base font-semibold text-ink">Mismatch rules</h3>
       <p className="mt-2 text-sm text-ink-body">
         On Apply, a job is flagged when a call reason contains the pattern and the activity note contains the keyword.
         Capacity blocks are not flagged. The seeded example is GAS CHECK ↔ CLEANING.
       </p>
-      {error ? <p className="mt-2 text-sm text-error">{error}</p> : null}
+      {error ? <ErrorNote className="mt-2 text-sm" error={error} /> : null}
       <ul className="mt-3 divide-y divide-line border-y border-line">
         {rules.map((rule) => (
           <li key={rule.id} className="py-3">
@@ -204,7 +205,9 @@ function MismatchSection({ revision }: { revision: number }) {
             )}
           </li>
         ))}
-        {rules.length === 0 ? <li className="py-3 text-sm text-ink-body">No rules yet.</li> : null}
+        {rules.length === 0 ? <li className="max-w-prose py-3 text-sm text-ink-body">
+            No rules yet. A rule flags a job when its call reason and its note disagree, for example GAS CHECK with a note that says CLEANING. Add one below.
+          </li> : null}
       </ul>
       <form onSubmit={(event) => void onAdd(event)} className="mt-4 space-y-2">
         <p className="text-sm font-semibold text-ink">Add a rule</p>
@@ -232,7 +235,7 @@ function RuleFields({
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label" htmlFor={`${idPrefix}-pattern`}>
+      <label className="text-sm font-medium text-ink-label" htmlFor={`${idPrefix}-pattern`}>
         Call reason pattern
         <input
           id={`${idPrefix}-pattern`}
@@ -242,7 +245,7 @@ function RuleFields({
           onChange={(event) => onChange({ ...draft, call_reason_pattern: event.target.value })}
         />
       </label>
-      <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label" htmlFor={`${idPrefix}-keyword`}>
+      <label className="text-sm font-medium text-ink-label" htmlFor={`${idPrefix}-keyword`}>
         Conflicting keyword
         <input
           id={`${idPrefix}-keyword`}
@@ -252,7 +255,7 @@ function RuleFields({
           onChange={(event) => onChange({ ...draft, conflicting_keyword: event.target.value })}
         />
       </label>
-      <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label sm:col-span-2" htmlFor={`${idPrefix}-notes`}>
+      <label className="text-sm font-medium text-ink-label sm:col-span-2" htmlFor={`${idPrefix}-notes`}>
         Notes
         <textarea
           id={`${idPrefix}-notes`}
@@ -355,9 +358,9 @@ function TemplateSection({ revision }: { revision: number }) {
     <section className="rounded-lg border border-line p-4 shadow-card" data-testid="templates">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Templates</h3>
+          <h3 className="text-base font-semibold text-ink">Templates</h3>
           <p className="mt-2 text-sm text-ink-body">
-            Apply a template from New job or the job drawer. The seeded Tank Install templates include required
+            Apply a template from the job drawer. The seeded Tank Install templates include required
             Excavator (Dan) scheduled. Trip 2 does not store a parent job.
           </p>
         </div>
@@ -369,7 +372,7 @@ function TemplateSection({ revision }: { revision: number }) {
           New template
         </button>
       </div>
-      {error ? <p className="mt-2 text-sm text-error">{error}</p> : null}
+      {error ? <ErrorNote className="mt-2 text-sm" error={error} /> : null}
       <ul className="mt-3 divide-y divide-line border-y border-line">
         {templates.map((template) => (
           <li key={template.id} className="flex flex-wrap items-start justify-between gap-3 py-3">
@@ -399,12 +402,22 @@ function TemplateSection({ revision }: { revision: number }) {
             </div>
           </li>
         ))}
-        {templates.length === 0 ? <li className="py-3 text-sm text-ink-body">No templates yet.</li> : null}
+        {templates.length === 0 ? <li className="max-w-prose py-3 text-sm text-ink-body">
+            No templates yet. A template is a checklist that copies onto a job with a matching activity, such as the excavator call on a tank install.
+            {editingId == null ? (
+              <>
+                {' '}
+                <button type="button" onClick={startNew} className="font-semibold text-slate-900 underline underline-offset-2">
+                  Add the first one
+                </button>
+              </>
+            ) : null}
+          </li> : null}
       </ul>
       {editingId != null ? (
         <form onSubmit={(event) => void onSave(event)} className="mt-4 space-y-3">
           <p className="text-sm font-semibold text-ink">{editingId === 'new' ? 'New template' : 'Edit template'}</p>
-          <label className="block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="block text-sm font-medium text-ink-label">
             Name
             <input
               className={controlClass}
@@ -412,7 +425,7 @@ function TemplateSection({ revision }: { revision: number }) {
               onChange={(event) => setDraft({ ...draft, name: event.target.value })}
             />
           </label>
-          <label className="block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="block text-sm font-medium text-ink-label">
             Activity hint
             <input
               className={controlClass}
@@ -421,7 +434,7 @@ function TemplateSection({ revision }: { revision: number }) {
               onChange={(event) => setDraft({ ...draft, matches_activity_code: event.target.value })}
             />
           </label>
-          <label className="block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="block text-sm font-medium text-ink-label">
             Card color
             <input
               className={controlClass}
@@ -431,7 +444,7 @@ function TemplateSection({ revision }: { revision: number }) {
             />
           </label>
           <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Checklist</p>
+            <p className="text-sm font-medium text-ink-label">Checklist</p>
             {draft.items.map((item, index) => (
               <div key={index} className="flex flex-wrap items-center gap-2">
                 <input
@@ -462,7 +475,7 @@ function TemplateSection({ revision }: { revision: number }) {
             <button
               type="button"
               onClick={() => setDraft((current) => ({ ...current, items: [...current.items, { label: '', is_required: true }] }))}
-              className="text-sm font-semibold text-brand"
+              className="text-sm font-semibold text-slate-900 underline underline-offset-2"
             >
               Add item
             </button>

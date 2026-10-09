@@ -1,9 +1,9 @@
 import { JobMarks } from './JobMarks.tsx'
+import { JobIcon } from './JobIcon.tsx'
 import {
   CALENDAR_KIND_CARD_CLASS,
   CALENDAR_KIND_DOT_CLASS,
   CALENDAR_KIND_LABEL,
-  jobPinColor,
   primaryActivity,
 } from '../lib/colors.ts'
 import { formatCustomerAccount } from '../lib/format.ts'
@@ -32,7 +32,6 @@ export function JobBlock({
 }) {
   const kind = calendarKind(job)
   const capacity = isCapacityBlock(job)
-  const color = capacity ? '#64748b' : jobPinColor(job)
   const windowLabel = formatTimeWindow(job.begin_time, job.end_time)
   const location = capacity ? '—' : glanceLocation(job)
   const activity = primaryActivity(job)
@@ -57,7 +56,7 @@ export function JobBlock({
       ) : null}
       {boots ? (
         <span
-          className="inline-flex max-w-full items-center rounded-sm border border-amber-300 bg-amber-50 px-1 py-0.5 text-[12px] font-semibold leading-none text-amber-900"
+          className="inline-flex max-w-full items-center rounded-sm bg-amber-100 px-1 py-0.5 text-[12px] font-semibold leading-none text-amber-900"
           title={BOOTS_CHIP_LABEL}
           data-testid="boots-chip"
         >
@@ -73,7 +72,6 @@ export function JobBlock({
       className={`db-card relative h-full overflow-hidden rounded-md border bg-white text-left shadow-sm ${CALENDAR_KIND_CARD_CLASS[kind]} ${
         showGrab ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
       } ${compact ? 'px-1.5 py-1' : 'px-2 py-1.5'} ${className}`}
-      style={{ borderLeftWidth: 4, borderLeftColor: color, borderLeftStyle: 'solid' }}
     >
       {hideTime ? null : (
         <div className="flex items-center justify-between gap-1">
@@ -82,6 +80,7 @@ export function JobBlock({
         </div>
       )}
       <div className={`flex items-start gap-1 ${hideTime ? '' : 'mt-0.5'}`}>
+        <JobIcon job={job} size={compact ? 18 : 20} />
         {hideTime ? badges : null}
         <p className={`min-w-0 flex-1 font-semibold text-slate-900 ${compact ? 'text-xs leading-tight' : 'text-xs'}`}>
           <span className="line-clamp-2">{job.customer_name}</span>
@@ -100,10 +99,9 @@ export function JobBlock({
       <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium text-slate-500">
         <span className="inline-flex items-center gap-1">
           <span className={`size-1.5 rounded-full ${CALENDAR_KIND_DOT_CLASS[kind]}`} aria-hidden="true" />
-          {CALENDAR_KIND_LABEL[kind]}
+          {kind === 'in_pegasus' && wo ? `WO ${wo}` : CALENDAR_KIND_LABEL[kind]}
         </span>
-        {wo ? <span>WO {wo}</span> : null}
-        {locked && kind !== 'capacity' ? <span className="text-slate-400">locked</span> : null}
+        {kind !== 'in_pegasus' && wo ? <span>WO {wo}</span> : null}
       </p>
     </div>
   )

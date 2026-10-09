@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-restore-result-take"
+description = "Enables the restore_result_take command without any pre-configured scope."
+commands.allow = ["restore_result_take"]
+
+[[permission]]
+identifier = "deny-restore-result-take"
+description = "Denies the restore_result_take command without any pre-configured scope."
+commands.deny = ["restore_result_take"]

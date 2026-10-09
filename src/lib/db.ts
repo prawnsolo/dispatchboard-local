@@ -9,6 +9,7 @@ import {
   type DriveTimesOutcome,
 } from './drive-times.ts'
 import { AUTO_GEOCODE_MIN_GAP_MS, localToday, pickAutoGeocodeIds } from './auto-geocode.ts'
+import { unmappedFixableIds } from './google-fix.ts'
 import { geocodeStoredJobs, type LocalGeocodeSummary } from './geocode-db.ts'
 import { geocodeWithNominatim, type CensusLookup } from './geocode.ts'
 import { readGoogleMapsApiKey } from './google-key.ts'
@@ -18,11 +19,14 @@ import type { MismatchRuleDraft } from './mismatch.ts'
 import type { SheetPatch } from './sheet.ts'
 import type { TemplateDraft } from './templates.ts'
 import { ENABLE_JOB_CREATE } from './features.ts'
+import { diffImport, type ImportDiff } from './import-diff.ts'
+import { listHistory, type HistoryEntry } from './history.ts'
 import {
   applyImport,
   applySheetPatch,
   applyTemplateToJob,
   clearScheduledJobs,
+  ensureSchema,
   countRows,
   deleteBacklog,
   deleteMismatchRule,
@@ -104,8 +108,24 @@ export async function applyRows(rows: ParsedRow[], options: ApplyOptions): Promi
   return applyImport(await open(), rows, options)
 }
 
+/** What applying these rows would change. Read-only. */
+export async function previewImportDiff(rows: ParsedRow[]): Promise<ImportDiff> {
+  return diffImport(await open(), rows)
+}
+
+export async function queryJobHistory(jobId: number): Promise<HistoryEntry[]> {
+  const db = await open()
+  await ensureSchema(db)
+  return listHistory(db, jobId)
+}
+
 export async function queryJobs(filter: { date: string; query: string }): Promise<JobRow[]> {
   return listJobs(await open(), filter)
+}
+
+/** Jobs a Google retry could help: street address, no pin. */
+export async function queryUnmappedFixableIds(): Promise<number[]> {
+  return unmappedFixableIds(await listJobs(await open(), { date: '', query: '' }))
 }
 
 export async function queryDates(): Promise<DateCount[]> {
@@ -155,6 +175,43 @@ export async function backupIfDue(): Promise<string | null> {
   }
 }
 
+export type BackupEntry = {
+  name: string
+  size: number
+  modified_ms: number
+  before_restore: boolean
+}
+
+export async function listLocalBackups(): Promise<BackupEntry[]> {
+  return invoke<BackupEntry[]>('list_backups')
+}
+
+/**
+ * Schedule a restore and restart the app. The swap itself happens at the next
+ * launch, before the database opens (see src-tauri/src/restore.rs). Folding the
+ * write-ahead log into the main file first means the copy that gets set aside
+ * holds everything saved so far.
+ */
+export async function restoreFromBackup(name: string): Promise<void> {
+  const db = await open()
+  try {
+    await db.select('PRAGMA wal_checkpoint(TRUNCATE)')
+  } catch {
+    // not in WAL mode or checkpoint refused: the restore still keeps the file as it is
+  }
+  await invoke('restore_stage', { name })
+  await invoke('restart_app')
+}
+
+/** Message from a restore that ran at launch, once. */
+export async function takeRestoreResult(): Promise<string | null> {
+  try {
+    return (await invoke<string | null>('restore_result_take')) ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function wipeLocalDatabase(): Promise<void> {
   await wipeDatabase(await open())
 }
@@ -173,7 +230,7 @@ export async function clearScheduledLocalJobs(): Promise<number> {
 
 export async function geocodeLocalJobs(
   ids: number[],
-  opts: { allowNetwork: boolean; census?: CensusLookup; delayMs?: number },
+  opts: { allowNetwork: boolean; census?: CensusLookup; delayMs?: number; retryGoogle?: boolean },
 ): Promise<LocalGeocodeSummary> {
   // Key stays in the OS app config. A missing command or an empty file means no Google step.
   // Order: Census → site pin → Google (key saved) → Nominatim. All GETs run in Rust.

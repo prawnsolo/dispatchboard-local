@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { applyLocalTemplate, queryJobChecklist, queryTemplates, setLocalChecklistChecked } from '../lib/db.ts'
 import { suggestTemplateId } from '../lib/templates.ts'
 import type { ChecklistItemRow, TemplateRow } from '../lib/store.ts'
+import { ErrorNote } from './ErrorNote.tsx'
 
 const controlClass =
   'w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 outline-none focus:border-brand-500'
@@ -96,9 +97,9 @@ export function JobChecklist({
 
   return (
     <section className="space-y-2" data-testid="job-checklist">
-      <h3 className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Checklist</h3>
+      <h3 className="text-base font-semibold text-ink">Checklist</h3>
       <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-[200px] flex-1 text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+        <label className="min-w-[200px] flex-1 text-sm font-medium text-ink-label">
           Template
           <select
             className={`${controlClass} mt-1 normal-case tracking-normal`}
@@ -160,7 +161,7 @@ export function JobChecklist({
         </ul>
       )}
       {note ? <p className="text-sm text-ink-body">{note}</p> : null}
-      {error ? <p className="text-sm text-error">{error}</p> : null}
+      {error ? <ErrorNote className="text-sm" error={error} /> : null}
     </section>
   )
 }

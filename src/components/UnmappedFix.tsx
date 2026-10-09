@@ -1,8 +1,9 @@
 import { useEffect, useId, useState } from 'react'
 import { geocodeLocalJobs, saveLocalJobAddress, saveLocalManualPin } from '../lib/db.ts'
-import { parsePin } from '../lib/geocode.ts'
+import { jobHasMappedPin, parsePin, pinConfidence } from '../lib/geocode.ts'
 import { GOOGLE_KEY_EVENT, readGoogleMapsApiKey } from '../lib/google-key.ts'
 import type { JobRow } from '../lib/store.ts'
+import { ErrorNote } from './ErrorNote.tsx'
 
 export function UnmappedFix({
   job,
@@ -129,9 +130,11 @@ export function UnmappedFix({
         className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-lg bg-white p-5 shadow-card"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Unmapped</p>
+        <p className="text-sm font-medium text-ink-label">
+          {jobHasMappedPin(job) ? `Review pin · ${pinConfidence(job.geocode_source).label}` : 'Unmapped'}
+        </p>
         <h2 id={titleId} className="text-lg font-semibold">
-          Fix {job.customer_name}
+          {jobHasMappedPin(job) ? 'Review' : 'Fix'} {job.customer_name}
         </h2>
         <p className="mt-1 text-sm text-ink-body">
           {job.wo_number ? `WO ${job.wo_number}` : 'No work order'}
@@ -143,7 +146,7 @@ export function UnmappedFix({
             : 'Retry sends this street address to the public US Census geocoder. That call runs only after network geocoding is allowed. Google is not called until you paste a key in Settings. Pin save writes latitude and longitude on this PC and does not use the network.'}
         </p>
 
-        <label className="mt-4 block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+        <label className="mt-4 block text-sm font-medium text-ink-label">
           Street
           <input
             value={street}
@@ -151,7 +154,7 @@ export function UnmappedFix({
             className="mt-1 w-full rounded-md border border-line px-3 py-2 text-sm normal-case tracking-normal text-ink outline-none focus:border-brand"
           />
         </label>
-        <label className="mt-3 block text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+        <label className="mt-3 block text-sm font-medium text-ink-label">
           City, state, ZIP
           <input
             value={csz}
@@ -174,7 +177,7 @@ export function UnmappedFix({
             <button
               type="button"
               onClick={onAllow}
-              className="rounded-md border border-brand px-4 py-2 text-sm font-semibold text-brand hover:bg-brand-wash"
+              className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-50"
             >
               Allow network geocoding
             </button>
@@ -182,7 +185,7 @@ export function UnmappedFix({
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="text-sm font-medium text-ink-label">
             Latitude
             <input
               value={lat}
@@ -191,7 +194,7 @@ export function UnmappedFix({
               className="mt-1 w-full rounded-md border border-line px-3 py-2 text-sm normal-case tracking-normal text-ink outline-none focus:border-brand"
             />
           </label>
-          <label className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">
+          <label className="text-sm font-medium text-ink-label">
             Longitude
             <input
               value={lng}
@@ -236,7 +239,7 @@ export function UnmappedFix({
             Close
           </button>
         </div>
-        {error ? <p className="mt-3 text-sm text-error">{error}</p> : null}
+        {error ? <ErrorNote className="mt-3 text-sm" error={error} /> : null}
         {note ? <p className="mt-3 text-sm text-ink">{note}</p> : null}
       </div>
     </div>

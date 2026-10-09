@@ -1,3 +1,4 @@
+import { displayName } from '../lib/format.ts'
 import { formatHours } from '../lib/jobDurations.ts'
 import {
   problemTotal,
@@ -39,6 +40,7 @@ export function ProblemsStrip({
     { key: 'mismatch', selection: { kind: 'mismatch' }, tone: 'rose', count: summary.mismatch, label: 'Mismatch', mark: '≠', title: 'Call reason / note mismatch' },
     { key: 'flags', selection: { kind: 'flags' }, tone: 'amber', count: summary.flags, label: 'Open flags', mark: '⚑', title: 'Required checklist item unchecked' },
     { key: 'tentative', selection: { kind: 'tentative' }, tone: 'orange', count: summary.tentative, label: 'Tentative', title: 'No work order yet' },
+    { key: 'overlap', selection: { kind: 'overlap' }, tone: 'rose', count: summary.overlap, label: 'Double-booked', title: 'Overlapping times for one tech, or a job on their day off' },
     { key: 'boots', selection: { kind: 'boots' }, tone: 'amber', count: summary.boots, label: 'Boots', title: 'Inside job after UG/piping the same day' },
   ]
   const items: Item[] = [
@@ -48,7 +50,7 @@ export function ProblemsStrip({
       selection: { kind: 'over_capacity', tech: row.tech },
       tone: 'red',
       count: row.jobs,
-      label: `Over · ${row.tech} ${formatHours(row.totalHours)}h / ${formatHours(row.shiftHours)}h`,
+      label: `Over · ${displayName(row.tech)} ${formatHours(row.totalHours)}h / ${formatHours(row.shiftHours)}h`,
       title: `${row.tech}: ${formatHours(row.bookedHours)}h work + ${formatHours(row.driveHours)}h drive = ${formatHours(row.totalHours)}h on a ${formatHours(row.shiftHours)}h shift (duration table + crow-flies drive)`,
     })),
   ].filter((item) => item.count > 0)
@@ -63,7 +65,7 @@ export function ProblemsStrip({
       aria-label={`${prefix} problems`}
     >
       {problemTotal(summary) === 0 && isToday ? null : (
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">{prefix}</span>
+        <span className="text-sm font-semibold text-slate-700">{prefix}</span>
       )}
       {problemTotal(summary) === 0 ? (
         <span className="text-xs text-slate-700" data-testid="problems-none">

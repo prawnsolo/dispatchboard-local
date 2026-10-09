@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { JobDrawer } from '../components/JobDrawer.tsx'
+import { ActivityCell } from '../components/ActivityCell.tsx'
 import { JobMarks } from '../components/JobMarks.tsx'
 import { queryDates, queryJobs } from '../lib/db.ts'
-import { formatDate, formatTimeRange } from '../lib/format.ts'
+import { displayName, formatDate, formatTimeRange } from '../lib/format.ts'
 import { blankJobDraft, draftFromJob, type DateCount, type JobDraft, type JobRow } from '../lib/store.ts'
 import { ENABLE_JOB_CREATE } from '../lib/features.ts'
+import { WeatherBadge } from '../components/Weather.tsx'
+import { ErrorNote } from '../components/ErrorNote.tsx'
+import { downloadText } from '../lib/csv.ts'
+import { jobsCsv } from '../lib/exports.ts'
 
 export function JobsScreen({
   revision,
@@ -101,12 +106,21 @@ export function JobsScreen({
           {allDates || query.trim() ? ' · all dates' : ` · ${formatDate(date)}`}
           {query.trim() && !allDates ? ' · search spans all dates' : ''}
         </p>
+        <button
+          type="button"
+          disabled={shown.length === 0}
+          onClick={() => downloadText('dispatchboard-jobs.csv', jobsCsv(shown))}
+          title="Save the rows on screen as a CSV file"
+          className="ml-auto inline-flex h-8 items-center rounded-lg border border-slate-300 bg-white px-2.5 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:text-slate-400"
+        >
+          Export CSV
+        </button>
         {ENABLE_JOB_CREATE ? (
           <button
             type="button"
             data-testid="new-job-button"
             onClick={() => openDraft(blankJobDraft(), 'new')}
-            className="ml-auto rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
+            className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700"
           >
             New job
           </button>
@@ -119,7 +133,7 @@ export function JobsScreen({
             type="button"
             onClick={() => setAllDates(true)}
             className={`inline-flex h-8 items-center rounded px-2 text-meta font-medium uppercase tracking-wide ${
-              allDates ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'
+              allDates ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
             }`}
           >
             All dates
@@ -132,23 +146,18 @@ export function JobsScreen({
                 setAllDates(false)
                 onDateChange(day.schedule_date)
               }}
-              className={`inline-flex h-8 items-center rounded px-2 text-meta font-medium ${
-                !allDates && date === day.schedule_date ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-700'
+              className={`inline-flex h-8 items-center rounded px-2 py-1 text-meta font-medium ${
+                !allDates && date === day.schedule_date ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
               }`}
             >
               {formatDate(day.schedule_date)} · {day.n}
+              <WeatherBadge date={day.schedule_date} className={`ml-1.5 ${!allDates && date === day.schedule_date ? '!text-white' : ''}`} />
             </button>
           ))}
         </div>
       ) : null}
 
-      {error ? (
-        <p className="mt-4 text-sm text-error">
-          {/invoke/.test(error)
-            ? 'This window cannot open SQLite. Start the desktop app with npm run desktop.'
-            : error}
-        </p>
-      ) : null}
+      {error ? <ErrorNote className="mt-4 text-sm" error={error} /> : null}
 
       {!error && !loading && shown.length === 0 ? (
         <div className="mt-4 max-w-xl">
@@ -214,7 +223,7 @@ export function JobsScreen({
                 >
                   <td className="whitespace-nowrap px-2 py-1">{formatDate(job.schedule_date)}</td>
                   <td className="whitespace-nowrap px-2 py-1">{formatTimeRange(job.begin_time, job.end_time)}</td>
-                  <td className="px-2 py-1">{job.technician_name ?? '—'}</td>
+                  <td className="px-2 py-1">{job.technician_name ? displayName(job.technician_name) : '—'}</td>
                   <td className="whitespace-nowrap px-2 py-1">
                     {job.is_capacity_block ? (
                       <span className="rounded bg-slate-100 px-1.5 py-px text-meta font-medium uppercase tracking-wide text-slate-600">
@@ -236,7 +245,7 @@ export function JobsScreen({
                     </div>
                   </td>
                   <td className="px-2 py-1" title={job.activity_note ?? undefined}>
-                    {job.activity_1 ?? '—'}
+                    <ActivityCell job={job} />
                   </td>
                   <td className="px-2 py-1">{job.city ?? '—'}</td>
                   <td className="px-2 py-1">{job.address_street ?? job.address_raw ?? '—'}</td>

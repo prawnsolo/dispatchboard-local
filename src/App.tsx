@@ -4,13 +4,15 @@ import { MapChromeProvider, MapChromeSlot } from './components/MapChromeSlot.tsx
 import { ProblemsStrip } from './components/ProblemsStrip.tsx'
 import { SettingsPanel } from './components/SettingsPanel.tsx'
 import { UndoToast } from './components/UndoToast.tsx'
-import { autoGeocodeUpcoming, backupIfDue, moveLocalJob, queryJobs, saveLocalJob } from './lib/db.ts'
+import { autoGeocodeUpcoming, backupIfDue, moveLocalJob, queryCounts, queryJobs, saveLocalJob, takeRestoreResult } from './lib/db.ts'
 import { formatDate, todayInNewYork } from './lib/format.ts'
 import { problemPredicate, summarizeProblems, type ProblemSelection, type ProblemSummary } from './lib/problems.ts'
 import { scheduleHereKind } from './lib/schedule-here.ts'
 import { uniqueTechs } from './lib/schedule.ts'
 import {
+  makeEditUndoEntry,
   makeUndoEntry,
+  onJobEdited,
   newestLive,
   popUndo,
   pruneExpired,
@@ -27,9 +29,17 @@ import { MapScreen } from './screens/MapScreen.tsx'
 import { PlanningScreen } from './screens/PlanningScreen.tsx'
 import { SheetScreen } from './screens/SheetScreen.tsx'
 import { blankJobDraft, draftFromJob, type JobDraft, type JobRow } from './lib/store.ts'
+import { FirstRun } from './components/FirstRun.tsx'
+import { readFirstRunDone } from './lib/prefs.ts'
+import { TodayScreen } from './screens/TodayScreen.tsx'
 import { ENABLE_JOB_CREATE } from './lib/features.ts'
+import { CommandPalette, ShortcutHelp, type PaletteCommand } from './components/CommandPalette.tsx'
+import { isEditableTarget, shortcutFor } from './lib/shortcuts.ts'
+import { addDaysYmd } from './lib/schedule.ts'
+import { useWeatherRefresh } from './lib/weather-store.ts'
 
 const TABS = [
+  { id: 'today', label: 'Today' },
   { id: 'map', label: 'Map' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'jobs', label: 'Jobs' },
@@ -45,20 +55,28 @@ const PRIMARY_TABS = TABS.filter((tab) => tab.id !== 'planning')
 type TabId = (typeof TABS)[number]['id']
 
 /** Job views that the problems strip can filter. */
+/** Import has no day and no search, so its toolbar row is hidden. */
+const NO_TOOLBAR_TABS: ReadonlySet<string> = new Set(['import'])
 const PROBLEM_TABS: ReadonlySet<TabId> = new Set<TabId>(['map', 'calendar', 'jobs', 'sheet'])
 
 function tabFromHash(): TabId {
   const name = location.hash.replace(/^#\/?/, '')
-  return TABS.some((tab) => tab.id === name) ? (name as TabId) : 'jobs'
+  return TABS.some((tab) => tab.id === name) ? (name as TabId) : 'today'
 }
 
 export function App() {
   const [tab, setTab] = useState<TabId>(tabFromHash)
   const [revision, setRevision] = useState(0)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsView, setSettingsView] = useState<'home' | 'weather'>('home')
+  useWeatherRefresh()
   const [date, setDate] = useState(() => todayInNewYork())
   const [undoStack, setUndoStack] = useState<ScheduleUndoEntry[]>([])
   const [undoError, setUndoError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [firstRun, setFirstRun] = useState(false)
   const [query, setQuery] = useState('')
   const [seedDraft, setSeedDraft] = useState<JobDraft | null>(null)
   const [problems, setProblems] = useState<ProblemSummary | null>(null)
@@ -127,6 +145,30 @@ export function App() {
   }, [revision])
 
   useEffect(() => {
+    // Welcome screen: only on a truly empty database, only once.
+    if (readFirstRunDone()) return
+    let cancelled = false
+    void queryCounts()
+      .then((c) => {
+        if (!cancelled && c.jobs === 0 && c.backlog === 0) setFirstRun(true)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    // A restore runs at launch, before the UI exists. Say what happened, once.
+    void takeRestoreResult().then((message) => {
+      if (message) {
+        setNotice(message)
+        setRevision((n) => n + 1)
+      }
+    })
+  }, [])
+
+  useEffect(() => {
     // Daily safety copy of the local database, after the first screen has loaded.
     const id = window.setTimeout(() => void backupIfDue(), 5000)
     return () => window.clearTimeout(id)
@@ -155,12 +197,25 @@ export function App() {
     setUndoStack((current) => pushUndo(current, makeUndoEntry(previous)))
   }
 
+  useEffect(() => {
+    onJobEdited((before) => {
+      setUndoError(null)
+      setUndoStack((current) => pushUndo(current, makeEditUndoEntry(before)))
+    })
+    return () => onJobEdited(null)
+  }, [])
+
   async function onUndo() {
     const { stack, entry } = popUndo(pruneExpired(undoRef.current))
     setUndoStack(stack)
     if (!entry) return
     setUndoError(null)
     try {
+      if (entry.restoreDraft) {
+        await saveLocalJob(entry.restoreDraft)
+        setRevision((n) => n + 1)
+        return
+      }
       await moveLocalJob(entry.previous.jobId, {
         technician_name: entry.previous.technician_name,
         schedule_date: entry.previous.schedule_date,
@@ -174,6 +229,69 @@ export function App() {
       setUndoError(error instanceof Error ? error.message : String(error))
     }
   }
+
+  const goTab = useCallback((id: TabId) => {
+    if (location.hash !== `#/${id}`) location.hash = `#/${id}`
+  }, [])
+  const onUndoRef = useRef(onUndo)
+  onUndoRef.current = onUndo
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const inField = isEditableTarget(e.target)
+      // Ctrl+Z undoes the last move, but never steals it from a text field.
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && !inField) {
+        if (pruneExpired(undoRef.current).length) {
+          e.preventDefault()
+          void onUndoRef.current()
+        }
+        return
+      }
+      const action = shortcutFor({
+        key: e.key,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        altKey: e.altKey,
+        shiftKey: e.shiftKey,
+        inField,
+      })
+      if (!action) return
+      e.preventDefault()
+      switch (action.type) {
+        case 'palette':
+          setPaletteOpen((open) => !open)
+          break
+        case 'help':
+          setHelpOpen(true)
+          break
+        case 'today':
+          setDate(todayInNewYork())
+          break
+        case 'day':
+          setDate((d) => addDaysYmd(d, action.delta))
+          break
+        case 'focus-search':
+          document.getElementById('header-search')?.focus()
+          break
+        case 'tab': {
+          const target = PRIMARY_TABS[action.index]
+          if (target) goTab(target.id)
+          break
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [goTab])
+
+  const paletteCommands: PaletteCommand[] = [
+    ...PRIMARY_TABS.map((t, i) => ({ id: `tab-${t.id}`, label: `Go to ${t.label}`, hint: `Alt ${i + 1}`, run: () => goTab(t.id) })),
+    { id: 'today', label: 'Go to today', hint: 'T', run: () => setDate(todayInNewYork()) },
+    { id: 'prev-day', label: 'Previous day', hint: '[', run: () => setDate((d) => addDaysYmd(d, -1)) },
+    { id: 'next-day', label: 'Next day', hint: ']', run: () => setDate((d) => addDaysYmd(d, 1)) },
+    { id: 'settings', label: 'Open settings', run: () => setSettingsOpen(true) },
+    { id: 'help', label: 'Keyboard shortcuts', hint: '?', run: () => setHelpOpen(true) },
+  ]
 
   const liveUndo = newestLive(undoStack)
   const liveCount = pruneExpired(undoStack).length
@@ -267,6 +385,7 @@ export function App() {
             ) : null}
           </div>
         </div>
+        {NO_TOOLBAR_TABS.has(tab) ? null : (
         <div
           className="mt-1.5 flex min-w-0 flex-wrap items-center gap-2"
           data-testid="chrome-row-2"
@@ -275,6 +394,7 @@ export function App() {
           <label className="flex min-w-[10rem] flex-1 basis-40 items-center">
             <span className="sr-only">Search jobs and backlog</span>
             <input
+              id="header-search"
               type="search"
               value={query}
               placeholder="Search WO, customer, backlog"
@@ -293,7 +413,16 @@ export function App() {
           ) : null}
           {tab === 'map' ? <MapChromeSlot /> : null}
         </div>
+        )}
       </header>
+      {notice ? (
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 bg-slate-100 px-chrome py-2 text-sm text-slate-800" role="status">
+          <p>{notice}</p>
+          <button type="button" onClick={() => setNotice(null)} className="shrink-0 text-meta font-medium underline underline-offset-2">
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       {showProblems ? (
         <ProblemsStrip
           summary={problems}
@@ -304,6 +433,27 @@ export function App() {
         />
       ) : null}
       <main id="main" tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
+        <div className={tab === 'today' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
+          <TodayScreen
+            revision={revision}
+            date={date}
+            summary={problems}
+            onPickProblem={(selection) => {
+              setProblem(selection)
+              goTab('jobs')
+            }}
+            onGo={goTab}
+            onOpenWeatherSettings={() => {
+              setSettingsView('weather')
+              setSettingsOpen(true)
+            }}
+            onOpenJob={(job) => {
+              if (job.schedule_date) setDate(job.schedule_date)
+              setQuery(job.wo_number ?? job.customer_name)
+              goTab('jobs')
+            }}
+          />
+        </div>
         <div className={tab === 'import' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
           <ImportScreen revision={revision} onApplied={() => setRevision((n) => n + 1)} />
         </div>
@@ -365,10 +515,27 @@ export function App() {
         <SettingsPanel
           planningActive={tab === 'planning'}
           techOptions={mapTechOptions}
-          onClose={() => setSettingsOpen(false)}
+          initialView={settingsView}
+          onClose={() => {
+            setSettingsOpen(false)
+            setSettingsView('home')
+          }}
           onChanged={() => setRevision((n) => n + 1)}
         />
       ) : null}
+      {firstRun ? <FirstRun onImport={() => goTab('import')} onDone={() => setFirstRun(false)} /> : null}
+      {paletteOpen ? (
+        <CommandPalette
+          commands={paletteCommands}
+          onClose={() => setPaletteOpen(false)}
+          onPickJob={(job) => {
+            if (job.schedule_date) setDate(job.schedule_date)
+            setQuery(job.wo_number ?? job.customer_name)
+            goTab('jobs')
+          }}
+        />
+      ) : null}
+      {helpOpen ? <ShortcutHelp onClose={() => setHelpOpen(false)} /> : null}
       {liveUndo || undoError ? (
         <div className="pointer-events-none fixed bottom-4 right-4 z-30 flex flex-col items-end gap-2">
           {undoError ? <p className="pointer-events-auto rounded-md bg-white px-3 py-2 text-sm text-error shadow-card">{undoError}</p> : null}

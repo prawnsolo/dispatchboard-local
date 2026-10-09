@@ -6,8 +6,8 @@
  * `text-ink` / `border-line` / `bg-brand` classes follow Auto, Light, and Dark.
  */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-    'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
+    Arial, 'Apple Color Emoji', 'Segoe UI Emoji';
   --color-brand: var(--color-brand-600);
   --color-brand-hover: var(--color-brand-700);
   --color-brand-pressed: var(--color-brand-800);
@@ -22,6 +22,11 @@
   --color-warning: var(--color-amber-700);
   --color-error: var(--color-rose-700);
   --shadow-card: 0 1px 2px rgb(27 28 31 / 0.06), 0 1px 3px rgb(27 28 31 / 0.08);
+  /* One elevation. shadow-sm and shadow-card are the same soft shadow. */
+  --shadow-sm: 0 1px 2px rgb(27 28 31 / 0.06), 0 1px 3px rgb(27 28 31 / 0.08);
+  /* One radius for controls and panels; `rounded` and `rounded-sm` stay for chips. */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.5rem;
   /* Local runs on a desk monitor all day: meta text floors at 12px (shared token is 11px). */
   --text-meta: 0.75rem;
   --text-meta--line-height: 1.35;
@@ -85,6 +90,14 @@ body {
 
 button {
   cursor: pointer;
+}
+
+/* Times, counts and work order numbers line up in columns. */
+table,
+input[type='time'],
+input[type='date'],
+input[type='number'] {
+  font-variant-numeric: tabular-nums;
 }
 
 button:disabled {
@@ -167,4 +180,14 @@ button:disabled {
 .maplibregl-map .db-job-quick-view__value--title {
   font-weight: 600;
   color: #fff;
+}
+
+/* Day sheet printing: only #print-root prints, on white paper. */
+#print-root { display: none; }
+@media print {
+  #root { display: none !important; }
+  #print-root { display: block; background: #fff; color: #111; }
+  body { background: #fff !important; }
+  .print-page { break-after: page; }
+  .print-page:last-child { break-after: auto; }
 }

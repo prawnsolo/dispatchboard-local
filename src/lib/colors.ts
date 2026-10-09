@@ -47,7 +47,9 @@ export const MAP_SCHEDULE_STROKE: Record<MapScheduleSignal, string> = {
 const ACTIVITY_COLORS: Array<[RegExp, string]> = [
   [/TANK INSTALL/i, '#B45309'],
   [/REGULATOR/i, '#1D4ED8'],
+  [/LEAK\s*CHECK/i, '#BE185D'],
   [/GAS\s*CHECK/i, '#059669'],
+  [/TANK\s*REPAIR/i, '#92400E'],
   [/LOCK TANK/i, '#DC2626'],
   [/TANK PICK/i, '#EA580C'],
   [/TANK SWAP/i, '#C2410C'],

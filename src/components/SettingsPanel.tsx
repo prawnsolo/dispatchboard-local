@@ -1,9 +1,13 @@
+import { ErrorNote } from './ErrorNote.tsx'
+import { GoogleFixDialog } from './GoogleFixDialog.tsx'
+import { RestorePanel } from './RestorePanel.tsx'
 import { useEffect, useId, useState } from 'react'
 import {
   CLEAR_SCHEDULED_CONFIRM,
   clearScheduledLocalJobs,
   databasePath,
   queryCounts,
+  queryUnmappedFixableIds,
   WIPE_LOCAL_CONFIRM,
   backupLocalDatabase,
   wipeLocalDatabase,
@@ -12,6 +16,9 @@ import { desktopShellAvailable, readGoogleMapsApiKey, testGoogleMapsApiKey, writ
 import { isMapTechVisible, useAllowNetworkGeocoding, useMapHiddenTechs } from '../lib/prefs.ts'
 import { UNASSIGNED_TECH } from '../lib/schedule.ts'
 import { useTheme, type ThemePref } from '../lib/theme.tsx'
+import { DEFAULT_THRESHOLDS, type WeatherThresholds } from '../lib/weather.ts'
+import { refreshWeather, setWeatherEnabled, setWeatherThresholds, useWeatherState } from '../lib/weather-store.ts'
+import { YARD } from '../lib/yard.ts'
 
 const THEMES: ReadonlyArray<{ id: ThemePref; label: string }> = [
   { id: 'auto', label: 'Auto' },
@@ -28,7 +35,7 @@ function Details({ label, children }: { label: string; children: React.ReactNode
   )
 }
 
-type MenuView = 'home' | 'display' | 'lookup' | 'data'
+type MenuView = 'home' | 'display' | 'lookup' | 'weather' | 'data'
 
 function MenuRow({ title, hint, onClick }: { title: string; hint?: string; onClick: () => void }) {
   return (
@@ -66,7 +73,113 @@ function NetworkGeocodeSetting() {
   )
 }
 
-function GoogleKeySetting() {
+const THRESHOLD_FIELDS: ReadonlyArray<{ key: keyof WeatherThresholds; label: string; unit: string; step: number; hint?: string }> = [
+  { key: 'heavyRainIn', label: 'Heavy rain', unit: 'inches in one day', step: 0.25 },
+  { key: 'multiDayRainIn', label: 'Extreme rain', unit: 'inches over 3 days', step: 0.25 },
+  { key: 'gustMph', label: 'Strong wind', unit: 'mph gusts', step: 5 },
+  { key: 'hotF', label: 'Very hot', unit: '°F high', step: 1 },
+  { key: 'coldF', label: 'Very cold', unit: '°F low', step: 1 },
+]
+
+function WeatherSetting() {
+  const weather = useWeatherState()
+  const [draft, setDraft] = useState<Record<string, string>>({})
+  const point = `${YARD.lat.toFixed(2)}, ${YARD.lng.toFixed(2)}`
+
+  function commit(key: keyof WeatherThresholds) {
+    const raw = draft[key]
+    if (raw === undefined) return
+    const value = Number(raw)
+    const next = { ...weather.thresholds, [key]: raw.trim() === '' || !Number.isFinite(value) ? DEFAULT_THRESHOLDS[key] : value }
+    setWeatherThresholds(next)
+    setDraft((d) => {
+      const { [key]: _gone, ...rest } = d
+      return rest
+    })
+  }
+
+  const when = weather.snapshot ? new Date(weather.snapshot.fetchedAt).toLocaleString() : null
+
+  return (
+    <section data-testid="weather-setting">
+      <label className="flex items-start gap-3 text-sm text-ink">
+        <input
+          type="checkbox"
+          className="mt-1"
+          data-testid="weather-toggle"
+          checked={weather.enabled}
+          onChange={(event) => setWeatherEnabled(event.target.checked)}
+        />
+        <span>
+          <span className="font-semibold">Show the five-day forecast</span>
+          <span className="mt-0.5 block text-ink-body">
+            Rain, wind and temperature from the National Weather Service. Warns when heavy rain could float an underground
+            tank before it is covered.
+          </span>
+        </span>
+      </label>
+      <Details label="What gets sent">
+        <p>Only the yard's location, rounded to about a mile ({point}). Nothing about a customer, address or job.</p>
+        <p>Free, no account or key. Looked up every couple of hours while the app is open, and only when this is on.</p>
+      </Details>
+
+      {weather.enabled ? (
+        <>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="weather-refresh"
+              onClick={() => void refreshWeather(true)}
+              className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-body hover:border-ink hover:text-ink disabled:opacity-50"
+            >
+              Refresh now
+            </button>
+            <p className="text-sm text-ink-body" role="status">
+              {weather.status === 'loading' && !weather.snapshot ? 'Loading…' : null}
+              {weather.status === 'ok' && when ? `Updated ${when}` : null}
+            </p>
+          </div>
+          {weather.status === 'error' ? <p className="mt-2 text-sm text-error" role="alert">{weather.error}</p> : null}
+
+          <h3 className="mt-5 text-base font-semibold text-ink">When to warn</h3>
+          <p className="mt-1 text-sm text-ink-body">Change these to match what actually causes trouble.</p>
+          <div className="mt-2 grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2">
+            {THRESHOLD_FIELDS.map((f) => (
+              <label key={f.key} className="contents text-sm text-ink">
+                <span>
+                  {f.label}
+                  <span className="block text-meta text-ink-label">{f.unit}</span>
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  step={f.step}
+                  data-testid={`weather-th-${f.key}`}
+                  value={draft[f.key] ?? String(weather.thresholds[f.key])}
+                  onChange={(event) => setDraft((d) => ({ ...d, [f.key]: event.target.value }))}
+                  onBlur={() => commit(f.key)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') commit(f.key)
+                  }}
+                  className="w-24 rounded-md border border-line bg-white px-2 py-1.5 text-right text-sm tabular-nums text-ink outline-none focus:border-brand"
+                />
+              </label>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setWeatherThresholds(DEFAULT_THRESHOLDS)}
+            className="mt-3 text-sm font-medium text-ink underline underline-offset-2"
+          >
+            Reset to the standard numbers
+          </button>
+        </>
+      ) : null}
+    </section>
+  )
+}
+
+function GoogleKeySetting({ onChanged }: { onChanged: () => void }) {
   const [hasKey, setHasKey] = useState(false)
   const [savedKey, setSavedKey] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
@@ -78,6 +191,8 @@ function GoogleKeySetting() {
   const [note, setNote] = useState<string | null>(null)
   const [testNote, setTestNote] = useState<string | null>(null)
   const [testOk, setTestOk] = useState<boolean | null>(null)
+  const [fixIds, setFixIds] = useState<number[] | null>(null)
+  const [fixNote, setFixNote] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -108,7 +223,7 @@ function GoogleKeySetting() {
     }
   }, [])
 
-  async function onSave() {
+  async function onSave(): Promise<boolean> {
     setBusy(true)
     setError(null)
     setNote(null)
@@ -122,10 +237,27 @@ function GoogleKeySetting() {
       setDraft('')
       setReveal(false)
       setNote('Saved.')
+      return true
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
+      return false
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function onFix() {
+    setFixNote(null)
+    try {
+      if (draft.trim() !== '' && !(await onSave())) return
+      const ids = await queryUnmappedFixableIds()
+      if (ids.length === 0) {
+        setFixNote('Every address with a street already has a pin.')
+        return
+      }
+      setFixIds(ids)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
     }
   }
 
@@ -183,7 +315,7 @@ function GoogleKeySetting() {
       ) : (
         <p className="mt-2 text-sm text-ink-label">No key saved.</p>
       )}
-      <label className="mt-3 block text-xs font-medium uppercase tracking-wide text-slate-500">
+      <label className="mt-3 block text-sm font-medium text-slate-600">
         {hasKey ? 'Replace key' : 'API key'}
         <input
           type={reveal ? 'text' : 'password'}
@@ -224,6 +356,15 @@ function GoogleKeySetting() {
         >
           {reveal ? 'Hide' : 'Show'}
         </button>
+        <button
+          type="button"
+          data-testid="google-api-key-fix"
+          disabled={unavailable || busy}
+          onClick={() => void onFix()}
+          className="rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-body hover:border-ink hover:text-ink disabled:opacity-50"
+        >
+          Use Google to fix addresses not found
+        </button>
         {hasKey ? (
           <button
             type="button"
@@ -241,8 +382,10 @@ function GoogleKeySetting() {
           Saving a key needs the desktop app (<code>npm run desktop</code>).
         </p>
       ) : null}
-      {error && !unavailable ? <p className="mt-2 text-sm text-error">{error}</p> : null}
+      {error && !unavailable ? <ErrorNote className="mt-2 text-sm" error={error} /> : null}
       {note ? <p className="mt-2 text-sm text-ink-body">{note}</p> : null}
+      {fixNote ? <p className="mt-2 text-sm text-ink-body" data-testid="google-api-key-fix-note">{fixNote}</p> : null}
+      {fixIds ? <GoogleFixDialog ids={fixIds} onClose={() => setFixIds(null)} onChanged={onChanged} /> : null}
       {testNote ? (
         <p
           className={`mt-2 text-sm ${testOk ? 'text-success' : 'text-error'}`}
@@ -334,12 +477,15 @@ export function SettingsPanel({
   onChanged,
   planningActive = false,
   techOptions = [],
+  initialView = 'home',
 }: {
   onClose: () => void
   onChanged: () => void
   planningActive?: boolean
   /** Technician names for Map visibility checkboxes (Specialists included when present). */
   techOptions?: string[]
+  /** Open straight to one page, e.g. from the forecast's "Set up weather" button. */
+  initialView?: 'home' | 'weather'
 }) {
   const titleId = useId()
   const { pref, setPref } = useTheme()
@@ -347,7 +493,7 @@ export function SettingsPanel({
   const [pathError, setPathError] = useState<string | null>(null)
   const [counts, setCounts] = useState<{ jobs: number; sites: number; backlog: number } | null>(null)
   const [wipeError, setWipeError] = useState<string | null>(null)
-  const [view, setView] = useState<MenuView>('home')
+  const [view, setView] = useState<MenuView>(initialView)
   const [wiping, setWiping] = useState(false)
   const [backingUp, setBackingUp] = useState(false)
   const [backupMessage, setBackupMessage] = useState<string | null>(null)
@@ -446,9 +592,11 @@ export function SettingsPanel({
     home: 'Menu',
     display: 'Display',
     lookup: 'Address lookup',
+    weather: 'Weather',
     data: 'Data',
   }
   const [lookupAllowed] = useAllowNetworkGeocoding()
+  const weatherOn = useWeatherState().enabled
   const buttonClass =
     'rounded-md border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-body hover:border-ink hover:text-ink disabled:opacity-50'
 
@@ -496,6 +644,7 @@ export function SettingsPanel({
                 hint={lookupAllowed ? 'On' : 'Off'}
                 onClick={() => setView('lookup')}
               />
+              <MenuRow title="Weather" hint={weatherOn ? 'On' : 'Off'} onClick={() => setView('weather')} />
               <a
                 href="#/planning"
                 aria-current={planningActive ? 'page' : undefined}
@@ -519,7 +668,7 @@ export function SettingsPanel({
           {view === 'display' ? (
             <>
               <section data-testid="appearance-setting">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Appearance</h3>
+                <h3 className="text-base font-semibold text-ink">Appearance</h3>
                 <div className="mt-2 flex rounded-md border border-slate-300 p-0.5" role="radiogroup" aria-label="Appearance">
                   {THEMES.map((theme) => {
                     const active = pref === theme.id
@@ -541,7 +690,7 @@ export function SettingsPanel({
                 </div>
               </section>
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Map technicians</h3>
+                <h3 className="text-base font-semibold text-ink">Map technicians</h3>
                 <div className="mt-2">
                   <MapTechVisibilitySetting techOptions={techOptions} />
                 </div>
@@ -553,13 +702,15 @@ export function SettingsPanel({
             <>
               <NetworkGeocodeSetting />
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Google Maps API key</h3>
+                <h3 className="text-base font-semibold text-ink">Google Maps API key</h3>
                 <div className="mt-2">
-                  <GoogleKeySetting />
+                  <GoogleKeySetting onChanged={onChanged} />
                 </div>
               </div>
             </>
           ) : null}
+
+          {view === 'weather' ? <WeatherSetting /> : null}
 
           {view === 'data' ? (
             <>
@@ -578,6 +729,9 @@ export function SettingsPanel({
                   </button>
                 </div>
                 {backupMessage ? <p className="mt-2 break-all text-sm text-ink-body">{backupMessage}</p> : null}
+                <div className="mt-3">
+                  <RestorePanel disabled={Boolean(pathError)} />
+                </div>
                 <Details label="Backups and file location">
                   <p>A backup runs about once a day. The newest 14 are kept next to the database and stay on this PC.</p>
                   {dbPath ? <p className="break-all font-mono text-ink">{dbPath}</p> : null}
@@ -585,7 +739,7 @@ export function SettingsPanel({
               </section>
 
               <section data-testid="clear-scheduled">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Clear scheduled jobs</h3>
+                <h3 className="text-base font-semibold text-ink">Clear scheduled jobs</h3>
                 <p className="mt-2 text-sm text-ink-body">Deletes every dated job. Undated jobs, sites and rules stay.</p>
                 {!confirmClear ? (
                   <button
@@ -603,7 +757,7 @@ export function SettingsPanel({
                   </button>
                 ) : (
                   <div className="mt-3 space-y-2 rounded-md border border-line bg-surface p-3">
-                    <label className="block text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <label className="block text-sm font-medium text-slate-600">
                       Type {CLEAR_SCHEDULED_CONFIRM} to confirm
                       <input
                         type="text"
@@ -639,7 +793,7 @@ export function SettingsPanel({
                     </div>
                   </div>
                 )}
-                {clearError ? <p className="mt-2 text-sm text-error">{clearError}</p> : null}
+                {clearError ? <ErrorNote className="mt-2 text-sm" error={clearError} /> : null}
                 {clearMessage ? (
                   <p className="mt-2 text-sm text-ink-body" data-testid="clear-scheduled-result">
                     {clearMessage}
@@ -648,12 +802,12 @@ export function SettingsPanel({
               </section>
 
               <section>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Wipe local database</h3>
+                <h3 className="text-base font-semibold text-ink">Wipe local database</h3>
                 <p className="mt-2 text-sm text-ink-body">Deletes all jobs, sites, backlog and caches. Rules and templates stay.</p>
                 <button type="button" disabled={wiping || Boolean(pathError)} onClick={() => void onWipe()} className={`mt-3 ${buttonClass}`}>
                   {wiping ? 'Wiping…' : 'Wipe local database'}
                 </button>
-                {wipeError ? <p className="mt-2 text-sm text-error">{wipeError}</p> : null}
+                {wipeError ? <ErrorNote className="mt-2 text-sm" error={wipeError} /> : null}
               </section>
             </>
           ) : null}

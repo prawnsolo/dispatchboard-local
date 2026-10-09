@@ -47,7 +47,7 @@ Ideas that were discussed and are still not started:
 
 ## 3. Product principles (carry forward from Local stage 1)
 
-1. **No phone-home by default.** Network only when Jose opts in (e.g. Census geocode, optional Google key he pastes).  
+1. **No phone-home by default.** Network only when Jose opts in (e.g. Census geocode, optional Google key he pastes, the five-day forecast, which sends only the yard's rounded coordinates to api.weather.gov).  
 2. **Import never deletes.** Match WO / capacity keys; update-matched is opt-in.  
 3. **Text chrome only** until Tiger branding is approved (logo stays under `assets/_pending`).  
 4. **Reuse office `src/lib/import/*` semantics** (headers, parse, fingerprint) so ADD files behave the same.  

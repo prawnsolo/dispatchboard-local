@@ -22,6 +22,25 @@ export const ALLOW_NETWORK_GEOCODING_CONFIRM =
   'If Census and Google have no match, the address may also go to OpenStreetMap Nominatim.\n\n' +
   'OK allows it and continues. Cancel leaves network geocoding off.'
 
+/** First-run welcome screen. Set once, whichever way it was dismissed. */
+export const FIRST_RUN_KEY = 'dispatchboard.local.firstRunDone'
+
+export function readFirstRunDone(): boolean {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(FIRST_RUN_KEY) === '1'
+  } catch {
+    return true // storage blocked: do not nag on every launch
+  }
+}
+
+export function writeFirstRunDone(): void {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(FIRST_RUN_KEY, '1')
+  } catch {
+    // nothing to do
+  }
+}
+
 export function readAllowNetworkGeocoding(): boolean {
   try {
     if (typeof localStorage === 'undefined') return false

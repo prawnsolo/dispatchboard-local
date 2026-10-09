@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { formatDateChip, todayInNewYork } from '../lib/format.ts'
 import { addDaysYmd } from '../lib/schedule.ts'
+import { WeatherBadge } from './Weather.tsx'
 
 export function DateChip({ date, onChange }: { date: string; onChange: (ymd: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -45,11 +46,12 @@ export function DateChip({ date, onChange }: { date: string; onChange: (ymd: str
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((value) => !value)}
-        className={`inline-flex h-8 items-center rounded-lg border bg-white px-2.5 text-sm font-medium tabular-nums ${
-          date === today ? 'border-brand-500 text-brand-600' : 'border-slate-300 text-slate-900 hover:bg-slate-50'
+        className={`inline-flex h-8 items-center gap-2 rounded-lg border bg-white px-2.5 text-sm font-medium tabular-nums ${
+          'border-slate-300 text-slate-900 hover:bg-slate-50'
         }`}
       >
         {formatDateChip(date)}
+        <WeatherBadge date={date} />
       </button>
       <button
         type="button"
@@ -64,8 +66,8 @@ export function DateChip({ date, onChange }: { date: string; onChange: (ymd: str
         onClick={() => onChange(today)}
         className={`inline-flex h-8 items-center rounded-lg border px-2.5 text-sm font-medium ${
           date === today
-            ? 'border-brand-600 bg-brand-600 text-white'
-            : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'
+            ? 'border-slate-200 bg-slate-100 text-slate-500'
+            : 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50'
         }`}
       >
         Today
@@ -76,7 +78,7 @@ export function DateChip({ date, onChange }: { date: string; onChange: (ymd: str
           aria-labelledby={titleId}
           className="absolute left-0 top-full z-30 mt-1 w-64 rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
         >
-          <p id={titleId} className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <p id={titleId} className="text-sm font-medium text-slate-600">
             Date
           </p>
           <label className="mt-2 flex flex-col gap-1 text-sm text-ink">

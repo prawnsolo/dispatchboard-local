@@ -2,7 +2,8 @@ import { useRef, useState } from 'react'
 import { JobBlock } from './JobBlock.tsx'
 import { TechLoad } from './TechLoad.tsx'
 import { loadKey, type TechDayLoad } from '../lib/techLoad.ts'
-import { formatWeekdayHeading } from '../lib/format.ts'
+import { displayName, formatWeekdayHeading } from '../lib/format.ts'
+import { WeatherBadge } from './Weather.tsx'
 import {
   UNASSIGNED_TECH,
   canDragJob,
@@ -73,6 +74,7 @@ export function ResourceWeekGrid({
                   }`}
                 >
                   {formatWeekdayHeading(date)}
+                  <WeatherBadge date={date} className="ml-1.5 align-middle normal-case" />
                 </th>
               )
             })}
@@ -82,7 +84,7 @@ export function ResourceWeekGrid({
           {techs.map((tech) => (
             <tr key={tech} className="align-top">
               <th className="sticky left-0 z-10 border-b border-r border-slate-200 bg-white px-2 py-1.5 text-left text-xs font-semibold text-slate-800">
-                {tech}
+                {displayName(tech)}
               </th>
               {days.map((day) => {
                 const date = ymd(day)

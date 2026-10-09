@@ -7,6 +7,7 @@ import {
   type ScheduleHereTarget,
 } from '../lib/schedule-here.ts'
 import type { JobRow } from '../lib/store.ts'
+import { ErrorNote } from './ErrorNote.tsx'
 
 function kindCopy(kind: ReturnType<typeof scheduleHereKind>): string {
   if (kind === 'tentative-move') {
@@ -59,7 +60,7 @@ export function ScheduleHereDialog({
         data-testid="schedule-here-sheet"
         className="w-full max-w-md rounded-lg bg-white p-5 shadow-card"
       >
-        <p className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Best days</p>
+        <p className="text-sm font-medium text-ink-label">Best days</p>
         <h2 id="schedule-here-title" className="text-lg font-semibold">
           Schedule here
         </h2>
@@ -75,9 +76,7 @@ export function ScheduleHereDialog({
           </p>
         ) : null}
         {error ? (
-          <p className="mt-2 text-sm text-error" role="alert">
-            {error}
-          </p>
+          <ErrorNote className="mt-2 text-sm" error={error} />
         ) : null}
         <div className="mt-4 flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-md px-3 py-2 text-sm font-semibold text-ink-body hover:text-ink">

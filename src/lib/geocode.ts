@@ -473,6 +473,13 @@ export type RunGeocodeChainOpts = {
    */
   callNominatim?: boolean
   nominatim?: NominatimLookup
+  /**
+   * The user asked to try Google again for addresses that already missed. A
+   * cached OpenStreetMap miss is not final then, so Google runs once. A cached
+   * Google miss still is: the same key gives the same answer. Skips
+   * OpenStreetMap, which already ran.
+   */
+  retryGoogle?: boolean
 }
 
 type GoogleAttempt =
@@ -678,6 +685,7 @@ export async function runGeocodeChain(
       // this entry is a Census-era `none` (Google not tried yet), not a
       // recorded Google ZERO_RESULTS (`google` + null coords). A recorded
       // Nominatim miss means every network lookup already missed.
+      if (opts.retryGoogle) return afterCensusMiss(false, false, !cacheIsGoogleMiss(hit), false)
       const terminal = cacheIsNominatimMiss(hit)
       return afterCensusMiss(false, false, !terminal && !cacheIsGoogleMiss(hit), !terminal)
     }
@@ -777,6 +785,26 @@ export function jobHasMappedPin(job: {
   return src === 'census' || src === 'site_pin' || src === 'manual' || src === 'google' || src === 'nominatim'
 }
 
+export type PinConfidence = { level: 'high' | 'good' | 'check' | 'none'; label: string }
+
+/** Plain-words trust level for a stored pin, shown on the Map and in the review list. */
+export function pinConfidence(source: string | null | undefined): PinConfidence {
+  switch (source) {
+    case 'manual':
+      return { level: 'high', label: 'Placed by hand' }
+    case 'site_pin':
+      return { level: 'high', label: 'Saved site pin' }
+    case 'census':
+      return { level: 'good', label: 'Census address match' }
+    case 'google':
+      return { level: 'good', label: 'Google match' }
+    case 'nominatim':
+      return { level: 'check', label: 'Street-level only (OpenStreetMap)' }
+    default:
+      return { level: 'none', label: 'No pin' }
+  }
+}
+
 export type GeocodePersistJob = {
   id: number
   address_street: string | null
@@ -845,6 +873,7 @@ export type GeocodePersistBatch = {
   census_calls: number
   google_calls: number
   nominatim_calls: number
+  google_errors: number
   geocode_errors: number
   cache_writes: CacheEntry[]
 }
@@ -864,6 +893,8 @@ export async function geocodeAndPersistRows(
     /** Present only when network geocoding is allowed. Runs after Google. */
     nominatim?: NominatimLookup
     nominatimDelayMs?: number
+    /** Try Google again for addresses that missed before. See RunGeocodeChainOpts. */
+    retryGoogle?: boolean
   } = {},
 ): Promise<GeocodePersistBatch> {
   const delayMs = opts.delayMs ?? CENSUS_DELAY_MS
@@ -881,6 +912,7 @@ export async function geocodeAndPersistRows(
   let census_calls = 0
   let google_calls = 0
   let geocode_errors = 0
+  let google_errors = 0
   const cache_writes: CacheEntry[] = []
 
   for (const row of rows) {
@@ -898,7 +930,15 @@ export async function geocodeAndPersistRows(
           site: key ? (siteByKey.get(key) ?? null) : null,
         },
         cache,
-        { callCensus, census: opts.census, callGoogle, google: opts.google, callNominatim, nominatim: opts.nominatim },
+        {
+          callCensus,
+          census: opts.census,
+          callGoogle,
+          google: opts.google,
+          callNominatim,
+          nominatim: opts.nominatim,
+          retryGoogle: opts.retryGoogle,
+        },
       )
       if (result.census_called) {
         census_calls++
@@ -935,6 +975,7 @@ export async function geocodeAndPersistRows(
       }
       if (result.google_error) {
         geocode_errors++
+        google_errors++
         consecutiveGoogleErrors++
         if (consecutiveGoogleErrors >= GOOGLE_ERROR_CIRCUIT) callGoogle = false
       } else if (result.google_called) {
@@ -964,5 +1005,5 @@ export async function geocodeAndPersistRows(
     }
   }
 
-  return { attempted, skipped, census_calls, google_calls, nominatim_calls, geocode_errors, cache_writes }
+  return { attempted, skipped, census_calls, google_calls, nominatim_calls, google_errors, geocode_errors, cache_writes }
 }

@@ -92,7 +92,7 @@ export function DriveTimesControl({
 
   return (
     <section data-testid="drive-times-control">
-      <h3 className="text-xs font-medium uppercase tracking-[0.05em] text-ink-label">Drive times</h3>
+      <h3 className="text-base font-semibold text-ink">Drive times</h3>
       <p className="mt-1 text-xs text-ink-body">
         One technician and one day. One Google Routes call, then the legs stay cached on this PC until the schedule
         changes.

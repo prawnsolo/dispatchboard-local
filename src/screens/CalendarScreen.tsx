@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CALENDAR_KIND_LEGEND_CLASS } from '../lib/colors.ts'
+import { JobTypeChips, countJobTypes } from '../components/JobTypeChips.tsx'
 import { JobDrawer } from '../components/JobDrawer.tsx'
 import { ResourceDayGrid } from '../components/ResourceDayGrid.tsx'
 import { ResourceWeekGrid } from '../components/ResourceWeekGrid.tsx'
 import { moveLocalJob, queryJobs } from '../lib/db.ts'
-import { formatDate } from '../lib/format.ts'
 import {
   addDaysYmd,
+  calendarKind,
   firstScheduledDate,
+  isCapacityBlock,
   jobsInRange,
   jobsOnDate,
   uniqueTechs,
@@ -18,6 +20,7 @@ import { ptoDayKeys } from '../lib/pto.ts'
 import { techDayLoads } from '../lib/techLoad.ts'
 import { draftFromJob, type JobDraft, type JobRow, type ScheduleMove } from '../lib/store.ts'
 import { snapshotFromJob, type ScheduleSnapshot } from '../lib/undo.ts'
+import { ErrorNote } from '../components/ErrorNote.tsx'
 
 type CalView = 'timegrid' | 'week'
 
@@ -39,7 +42,8 @@ export function CalendarScreen({
 }) {
   const [view, setView] = useState<CalView>('timegrid')
   const [jobs, setJobs] = useState<JobRow[]>([])
-  const [error, setError] = useState<string | null>(null)
+  const [loaded, setLoaded] = useState(false)
+    const [error, setError] = useState<string | null>(null)
   const [persistError, setPersistError] = useState<string | null>(null)
   const [draft, setDraft] = useState<JobDraft | null>(null)
   const [session, setSession] = useState(0)
@@ -58,6 +62,7 @@ export function CalendarScreen({
       .then((rows) => {
         if (cancelled) return
         setJobs(rows)
+        setLoaded(true)
         setError(null)
       })
       .catch((err: unknown) => {
@@ -83,6 +88,9 @@ export function CalendarScreen({
   }, [shown, weekJobs])
   const sampleDate = firstScheduledDate(jobs)
   const itemCount = view === 'timegrid' ? dayJobs.length : weekJobs.length
+  const inView = view === 'timegrid' ? dayJobs : weekJobs
+  const dayTypes = useMemo(() => countJobTypes(inView.filter((job) => !isCapacityBlock(job))), [inView])
+  const kindsInView = useMemo(() => new Set(inView.map((job) => calendarKind(job))), [inView])
   const emptyHere = jobs.length > 0 && (view === 'timegrid' ? dayJobs.length === 0 : weekJobs.length === 0)
 
   function openJob(job: JobRow) {
@@ -128,7 +136,7 @@ export function CalendarScreen({
           ›
         </button>
         <p className="text-xs text-slate-600">
-          {itemCount} {itemCount === 1 ? 'item' : 'items'} {view === 'timegrid' ? 'this day' : 'this week'} · work orders stay locked
+          {itemCount} {itemCount === 1 ? 'item' : 'items'} {view === 'timegrid' ? 'this day' : 'this week'}
         </p>
         <div className="ml-auto inline-flex rounded-md border border-slate-300 p-0.5" role="group" aria-label="Calendar layout">
           <button
@@ -154,28 +162,35 @@ export function CalendarScreen({
       </div>
 
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-slate-200 bg-white px-chrome py-1 text-meta text-slate-600">
-        <span className={CALENDAR_KIND_LEGEND_CLASS.tentative}>Tentative · drag</span>
-        <span className={CALENDAR_KIND_LEGEND_CLASS.in_pegasus}>In Pegasus · locked</span>
-        <span className={CALENDAR_KIND_LEGEND_CLASS.capacity}>Capacity</span>
-        <span className="text-slate-400">Left border = activity color</span>
-        <span>{formatDate(date)}</span>
+        {kindsInView.has('tentative') ? <span className={CALENDAR_KIND_LEGEND_CLASS.tentative}>Tentative</span> : null}
+        {kindsInView.has('in_pegasus') ? <span className={CALENDAR_KIND_LEGEND_CLASS.in_pegasus}>In Pegasus</span> : null}
+        {kindsInView.has('capacity') ? <span className={CALENDAR_KIND_LEGEND_CLASS.capacity}>Capacity</span> : null}
       </div>
-
-      {error ? (
-        <p className="px-4 py-2 text-sm text-error">
-          {/invoke/.test(error)
-            ? 'This window cannot open SQLite. Start the desktop app with npm run desktop.'
-            : error}
-        </p>
+      {dayTypes.length ? (
+        <div className="shrink-0 border-b border-slate-200 bg-white px-chrome py-1.5">
+          <JobTypeChips types={dayTypes} />
+        </div>
       ) : null}
-      {persistError ? <p className="px-4 py-1 text-sm text-error">{persistError}</p> : null}
+
+      {error ? <ErrorNote className="px-4 py-2 text-sm" error={error} /> : null}
+      {persistError ? <ErrorNote className="px-4 py-1 text-sm" error={persistError} /> : null}
+
+      {loaded && !error && jobs.length === 0 ? (
+        <div className="border-b border-line px-4 py-4" data-testid="calendar-empty">
+          <h2 className="text-base font-semibold text-ink">Nothing scheduled yet</h2>
+          <p className="mt-1 max-w-prose text-sm text-ink-body">Jobs appear here by technician and time once you bring in an ADD export.</p>
+          <a href="#/import" className="mt-3 inline-flex rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand-hover">
+            Go to import
+          </a>
+        </div>
+      ) : null}
 
       {emptyHere && sampleDate ? (
         <div className="border-b border-line px-4 py-2">
           <button
             type="button"
             onClick={() => onDateChange(sampleDate)}
-            className="text-sm font-semibold text-brand hover:underline"
+            className="text-sm font-semibold text-slate-900 underline underline-offset-2"
           >
             {view === 'timegrid' ? 'Jump to a day with jobs' : 'Jump to a week with jobs'}
           </button>

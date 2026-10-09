@@ -5,8 +5,10 @@
 //! errors, and every remaining row fell through to Google (quota drain). This
 //! module makes the GET from Rust instead, where CORS does not apply.
 //!
-//! Scope is fixed here, not in the webview: https only, three exact hosts, one
-//! path each, no credentials or custom ports. The URL may carry the Google key
+//! Scope is fixed here, not in the webview: https only, four exact hosts, a short
+//! list of paths each, no credentials or custom ports. The fourth host is the
+//! National Weather Service (api.weather.gov); the app sends it only the yard's
+//! rounded coordinates, never anything about a customer. The URL may carry the Google key
 //! as a query parameter, so URLs are never logged and errors are returned
 //! without the URL.
 
@@ -29,6 +31,8 @@ pub enum Provider {
     Census,
     Google,
     Nominatim,
+    /// National Weather Service forecast. Public, no key.
+    Nws,
 }
 
 impl Provider {
@@ -37,6 +41,7 @@ impl Provider {
             "census" => Ok(Self::Census),
             "google" => Ok(Self::Google),
             "nominatim" => Ok(Self::Nominatim),
+            "nws" => Ok(Self::Nws),
             _ => Err("Unknown geocoder.".into()),
         }
     }
@@ -46,6 +51,7 @@ impl Provider {
             Self::Census => "geocoding.geo.census.gov",
             Self::Google => "maps.googleapis.com",
             Self::Nominatim => "nominatim.openstreetmap.org",
+            Self::Nws => "api.weather.gov",
         }
     }
 
@@ -56,6 +62,7 @@ impl Provider {
             }
             Self::Google => path == "/maps/api/geocode/json",
             Self::Nominatim => path == "/search",
+            Self::Nws => nws_path_ok(path),
         }
     }
 
@@ -64,11 +71,37 @@ impl Provider {
             Self::Census => "Census geocoder",
             Self::Google => "Google geocoder",
             Self::Nominatim => "Street lookup",
+            Self::Nws => "Weather service",
         }
     }
 }
 
-/// Only the three geocoder endpoints. Anything else is refused before any I/O.
+/// The few NWS paths the weather feature uses: the grid lookup for a point, the
+/// forecast and raw grid data for that grid cell, and active alerts. Characters
+/// are limited to what those paths contain, so nothing else can ride along.
+fn nws_path_ok(path: &str) -> bool {
+    let plain = |s: &str| !s.is_empty() && s.chars().all(|c| c.is_ascii_alphanumeric() || matches!(c, '/' | ',' | '.' | '-'));
+    if path == "/alerts/active" {
+        return true;
+    }
+    if !plain(path) || path.contains("..") {
+        return false;
+    }
+    if let Some(rest) = path.strip_prefix("/points/") {
+        return !rest.contains('/');
+    }
+    if let Some(rest) = path.strip_prefix("/gridpoints/") {
+        let parts: Vec<&str> = rest.split('/').collect();
+        return match parts.as_slice() {
+            [office, cell] => !office.is_empty() && !cell.is_empty(),
+            [office, cell, "forecast"] => !office.is_empty() && !cell.is_empty(),
+            _ => false,
+        };
+    }
+    false
+}
+
+/// Only the four fixed endpoints. Anything else is refused before any I/O.
 pub fn validate(provider: Provider, raw: &str) -> Result<reqwest::Url, String> {
     let refuse = || format!("{} request refused: URL is outside the geocoder scope.", provider.label());
     let url = reqwest::Url::parse(raw).map_err(|_| refuse())?;
@@ -106,7 +139,10 @@ pub async fn get(client: &reqwest::Client, provider: Provider, raw: &str) -> Res
     let url = validate(provider, raw)?;
     let res = client
         .get(url)
-        .header(reqwest::header::ACCEPT, "application/json")
+        .header(
+            reqwest::header::ACCEPT,
+            if provider == Provider::Nws { "application/geo+json" } else { "application/json" },
+        )
         .send()
         .await
         .map_err(|err| format!("{} failed: {}", provider.label(), err.without_url()))?;
@@ -138,6 +174,35 @@ mod tests {
         assert!(validate(Provider::Census, "https://geocoding.geo.census.gov/geocoder/locations/address?street=x").is_ok());
         assert!(validate(Provider::Google, "https://maps.googleapis.com/maps/api/geocode/json?address=x&key=k").is_ok());
         assert!(validate(Provider::Nominatim, "https://nominatim.openstreetmap.org/search?q=x&format=jsonv2").is_ok());
+    }
+
+    #[test]
+    fn allows_only_the_weather_paths() {
+        for url in [
+            "https://api.weather.gov/points/38.30,-77.46",
+            "https://api.weather.gov/gridpoints/LWX/84,87",
+            "https://api.weather.gov/gridpoints/LWX/84,87/forecast",
+            "https://api.weather.gov/alerts/active?point=38.30,-77.46",
+        ] {
+            assert!(validate(Provider::Nws, url).is_ok(), "{url} should be allowed");
+        }
+        for url in [
+            "http://api.weather.gov/points/38.30,-77.46",
+            "https://api.weather.gov.evil.test/points/38.30,-77.46",
+            "https://api.weather.gov/stations",
+            "https://api.weather.gov/points/38.30,-77.46/extra",
+            "https://api.weather.gov/gridpoints/LWX/84,87/stations",
+            "https://api.weather.gov/gridpoints/LWX/../x",
+            "https://api.weather.gov/alerts",
+            "https://api.weather.gov:8443/points/38.30,-77.46",
+            "https://www.weather.gov/points/38.30,-77.46",
+        ] {
+            assert!(validate(Provider::Nws, url).is_err(), "{url} should be refused");
+        }
+        // A geocoder URL is not a weather URL and the reverse.
+        assert!(validate(Provider::Nws, "https://nominatim.openstreetmap.org/search?q=x").is_err());
+        assert!(validate(Provider::Nominatim, "https://api.weather.gov/points/1,2").is_err());
+        assert_eq!(Provider::parse("nws"), Ok(Provider::Nws));
     }
 
     #[test]

@@ -3,6 +3,8 @@ import { formatTimeRange } from '../lib/format.ts'
 import { BACKLOG_TYPE_LABELS, isBacklogType } from '../lib/backlog.ts'
 import { techCardTint } from '../lib/colors.ts'
 import { formatTechDayLoad } from '../lib/jobDurations.ts'
+import { JobIcon } from './JobIcon.tsx'
+import { summaryAddress } from './JobSummary.tsx'
 import { LoadHours } from './TechLoad.tsx'
 import type { NearbySummary } from '../lib/proximity.ts'
 import { formatBestDay } from '../lib/schedule-here.ts'
@@ -152,7 +154,7 @@ export function BestDays({
                             {ENABLE_JOB_CREATE ? (
                               <button
                                 type="button"
-                                className="rounded px-1.5 py-0.5 text-xs font-semibold text-brand hover:bg-brand-wash"
+                                className="rounded px-1.5 py-0.5 text-xs font-semibold text-slate-900 underline underline-offset-2 hover:bg-slate-100"
                                 data-testid="schedule-here"
                                 onClick={() => {
                                   const target = { date: day.date, tech: group.tech }
@@ -169,12 +171,18 @@ export function BestDays({
                             <button
                               key={job.id}
                               type="button"
-                              className={`flex w-full items-baseline justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-white/70 ${
+                              className={`flex w-full items-start justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-white/70 ${
                                 selectedJobId === job.id ? 'bg-brand-wash' : ''
                               }`}
                               onClick={() => onSelectJob(job.id)}
                             >
-                              <span className="min-w-0 truncate text-ink">{jobLine(job)}</span>
+                              <span className="flex min-w-0 items-start gap-1.5">
+                    <JobIcon job={job} size={20} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-ink">{jobLine(job)}</span>
+                      <span className="block truncate text-ink-label">{summaryAddress(job)}</span>
+                    </span>
+                  </span>
                               <span className="shrink-0 tabular-nums text-ink-label">{miles(distance)}</span>
                             </button>
                           ))}
@@ -193,15 +201,21 @@ export function BestDays({
           ) : null}
           {summary.unscheduled.length > 0 ? (
             <section className="mt-3">
-              <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-ink-label">Nearby jobs with no date yet</h3>
+              <h3 className="px-2 text-sm font-semibold text-ink-label">Nearby jobs with no date yet</h3>
               {summary.unscheduled.slice(0, showAll ? undefined : 8).map(({ job, miles: distance }) => (
                 <button
                   key={job.id}
                   type="button"
-                  className="flex w-full items-baseline justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-surface"
+                  className="flex w-full items-start justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-surface"
                   onClick={() => onSelectJob(job.id)}
                 >
-                  <span className="min-w-0 truncate text-ink">{jobLine(job)}</span>
+                  <span className="flex min-w-0 items-start gap-1.5">
+                    <JobIcon job={job} size={20} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-ink">{jobLine(job)}</span>
+                      <span className="block truncate text-ink-label">{summaryAddress(job)}</span>
+                    </span>
+                  </span>
                   <span className="shrink-0 tabular-nums text-ink-label">{miles(distance)}</span>
                 </button>
               ))}
@@ -209,12 +223,12 @@ export function BestDays({
           ) : null}
           {summary.backlog.length > 0 ? (
             <section className="mt-3">
-              <h3 className="px-2 text-xs font-semibold uppercase tracking-wide text-ink-label">Open backlog nearby</h3>
+              <h3 className="px-2 text-sm font-semibold text-ink-label">Open backlog nearby</h3>
               {summary.backlog.slice(0, showAll ? undefined : 8).map(({ item, miles: distance }) => (
                 <button
                   key={item.id}
                   type="button"
-                  className="flex w-full items-baseline justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-surface"
+                  className="flex w-full items-start justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-surface"
                   onClick={() => onSelectBacklog(item.id)}
                 >
                   <span className="min-w-0 truncate text-ink">
